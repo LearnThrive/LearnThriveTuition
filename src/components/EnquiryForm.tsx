@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { siteConfig, subjectOptions, yearGroups } from "@/lib/site";
+import { subjectOptions, yearGroups } from "@/lib/site";
 
 type FormValues = {
   parentName: string;
@@ -16,7 +16,7 @@ type FormValues = {
 
 type FieldName = keyof FormValues;
 type FormErrors = Partial<Record<FieldName, string>>;
-type FormStatus = "idle" | "preparing" | "prepared";
+type FormStatus = "idle" | "submitting" | "success" | "error";
 
 const initialValues: FormValues = {
   parentName: "",
@@ -32,7 +32,7 @@ function validate(values: FormValues): FormErrors {
   const errors: FormErrors = {};
 
   if (!values.parentName.trim()) {
-    errors.parentName = "Enter the parent or guardian’s name.";
+    errors.parentName = "Enter the parent or guardian's name.";
   }
   if (!values.email.trim()) {
     errors.email = "Enter an email address.";
@@ -48,7 +48,7 @@ function validate(values: FormValues): FormErrors {
     errors.phone = "Enter a valid phone number, or leave this field blank.";
   }
   if (!values.yearGroup) {
-    errors.yearGroup = "Choose the student’s year group.";
+    errors.yearGroup = "Choose the student's year group.";
   }
   if (!values.subject) {
     errors.subject = "Choose a subject.";
@@ -62,37 +62,13 @@ function validate(values: FormValues): FormErrors {
   return errors;
 }
 
-function createMailto(values: FormValues) {
-  const subject = `Free consultation enquiry — ${values.subject}`;
-  const body = [
-    "Hello LearnThrive Tuition,",
-    "",
-    "I would like to arrange a free consultation.",
-    "",
-    `Parent/guardian: ${values.parentName}`,
-    `Email: ${values.email}`,
-    `Phone: ${values.phone || "Not provided"}`,
-    `Student year group: ${values.yearGroup}`,
-    `Subject: ${values.subject}`,
-    `Preferred contact method: ${values.contactMethod}`,
-    "",
-    "Support required:",
-    values.support,
-    "",
-    "Kind regards,",
-    values.parentName,
-  ].join("\n");
-
-  return `mailto:${siteConfig.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
 export function EnquiryForm() {
   const [values, setValues] = useState<FormValues>(initialValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
-  const [mailto, setMailto] = useState("");
+  const [serverError, setServerError] = useState("");
   const errorSummaryRef = useRef<HTMLDivElement>(null);
-  const preparedRef = useRef<HTMLDivElement>(null);
+  const successRef = useRef<HTMLDivElement>(null);
 
   function updateField(name: FieldName, value: string) {
     setValues((current) => ({ ...current, [name]: value }));
@@ -105,10 +81,13 @@ export function EnquiryForm() {
           : {}),
       }));
     }
-    if (status === "prepared") setStatus("idle");
+    if (status === "error") {
+      setStatus("idle");
+      setServerError("");
+    }
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validate(values);
 
@@ -120,17 +99,61 @@ export function EnquiryForm() {
     }
 
     setErrors({});
-    setStatus("preparing");
-    const link = createMailto(values);
+    setStatus("submitting");
+    setServerError("");
 
-    window.requestAnimationFrame(() => {
-      setMailto(link);
-      setStatus("prepared");
-      window.requestAnimationFrame(() => preparedRef.current?.focus());
-    });
+    try {
+      const response = await fetch("/api/enquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+
+      if (response.ok) {
+        setStatus("success");
+        setValues(initialValues);
+        window.requestAnimationFrame(() => successRef.current?.focus());
+      } else {
+        const data = await response.json().catch(() => null);
+        setServerError(
+          data?.error ?? "We could not send your enquiry right now. Please try again shortly.",
+        );
+        setStatus("error");
+      }
+    } catch {
+      setServerError("A network error occurred. Please check your connection and try again.");
+      setStatus("error");
+    }
   }
 
   const hasErrors = Object.keys(errors).length > 0;
+
+  if (status === "success") {
+    return (
+      <div
+        className="form-message form-message--success"
+        role="status"
+        tabIndex={-1}
+        ref={successRef}
+      >
+        <strong>Your enquiry has been sent.</strong>
+        <p>
+          Thank you for getting in touch. We will review your enquiry and
+          respond as soon as possible.
+        </p>
+        <button
+          className="button button--primary"
+          type="button"
+          onClick={() => setStatus("idle")}
+        >
+          <span>Send another enquiry</span>
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M4 10h11M11 6l4 4-4 4" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form className="enquiry-form" noValidate onSubmit={handleSubmit}>
@@ -142,28 +165,14 @@ export function EnquiryForm() {
           ref={errorSummaryRef}
         >
           <strong>Check the highlighted fields.</strong>
-          <p>We have not prepared the enquiry yet.</p>
+          <p>Your enquiry has not been sent yet.</p>
         </div>
       ) : null}
 
-      {status === "prepared" ? (
-        <div
-          className="form-message form-message--prepared"
-          role="status"
-          tabIndex={-1}
-          ref={preparedRef}
-        >
-          <strong>Your enquiry email is ready.</strong>
-          <p>
-            Review and send it in your email app to complete your enquiry. No
-            information has been submitted by this website.
-          </p>
-          <a className="button button--primary" href={mailto}>
-            <span>Open email to review and send</span>
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M4 10h11M11 6l4 4-4 4" />
-            </svg>
-          </a>
+      {status === "error" && serverError ? (
+        <div className="form-message form-message--error" role="alert">
+          <strong>There was a problem.</strong>
+          <p>{serverError}</p>
         </div>
       ) : null}
 
@@ -240,7 +249,7 @@ export function EnquiryForm() {
         </div>
 
         <div className="form-field">
-          <label htmlFor="year-group">Student’s year group</label>
+          <label htmlFor="year-group">Student's year group</label>
           <select
             id="year-group"
             name="yearGroup"
@@ -337,20 +346,19 @@ export function EnquiryForm() {
         <button
           className="button button--primary"
           type="submit"
-          disabled={status === "preparing"}
+          disabled={status === "submitting"}
         >
           <span>
-            {status === "preparing" ? "Preparing enquiry…" : "Prepare enquiry email"}
+            {status === "submitting" ? "Sending enquiry…" : "Send enquiry"}
           </span>
           <svg viewBox="0 0 20 20" aria-hidden="true">
             <path d="M4 10h11M11 6l4 4-4 4" />
           </svg>
         </button>
         <p>
-          This form prepares an email on your device. You will review and send
-          it yourself; the website does not store your answers. Read our{" "}
-          <Link href="/privacy">privacy notice</Link> for how enquiry information
-          is used once you send it.
+          By submitting this form you agree to our{" "}
+          <Link href="/privacy">privacy notice</Link>. Your information will
+          only be used to respond to your enquiry.
         </p>
       </div>
     </form>

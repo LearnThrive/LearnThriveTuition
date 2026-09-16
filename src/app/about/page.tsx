@@ -1,153 +1,196 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { ButtonLink } from "@/components/ButtonLink";
-import { Container } from "@/components/Container";
+import { BodyClass } from "@/components/BodyClass";
+import { ScrollReveal } from "@/components/ScrollReveal";
+import { Marquee } from "@/components/Marquee";
 import { createMetadata } from "@/lib/metadata";
 import styles from "./about.module.css";
 
 export const metadata: Metadata = createMetadata({
-  title: "About LearnThrive",
+  title: "About Us",
   description:
     "Meet the founders of LearnThrive Tuition and the mission behind it: giving every student support that fits them, whatever their ability or background.",
   path: "/about",
 });
 
-function GrowthArrow() {
-  return (
-    <svg className={styles.growthArrow} viewBox="0 0 200 400" fill="none" aria-hidden="true">
-      <path d="M20 380 L80 250 L120 300 L180 60" />
-      <path d="M150 60 L180 40 L192 78" />
-    </svg>
-  );
-}
+const marqueeItems = [
+  "CHILDHOOD FRIENDS",
+  "TUTORING SINCE 16",
+  "ONE-TO-ONE, ONLINE",
+  "EVERY STUDENT UNDERSTOOD",
+];
 
 export default function AboutPage() {
   return (
-    <div className={styles.about}>
-      <section className={styles.hero} aria-labelledby="about-title">
-        <GrowthArrow />
-        <Container className={styles.container}>
+    <div className={styles.page}>
+      <BodyClass className="is-about" />
+
+      {/* ── Hero ──────────────────────────────────────── */}
+      <section className={styles.hero}>
+        <div className={styles.heroDots} aria-hidden="true" />
+        <div className={styles.heroGlow} aria-hidden="true" />
+        <div className={styles.heroInner}>
           <p className={styles.eyebrow}>About us</p>
-          <h1 id="about-title">Built for every kind of learner</h1>
-          <p className={styles.lead}>
+          <h1 className={styles.heroTitle}>
+            Built for every
+            <br />
+            kind of{" "}
+            <span className={styles.heroMark}>
+              <span className={styles.heroMarkBg} aria-hidden="true" />
+              <span className={styles.heroMarkText}>learner</span>
+            </span>
+          </h1>
+          <p className={styles.heroLead}>
             LearnThrive Tuition exists to give every student the support that
-            fits them — whatever their ability or background.
+            fits them &mdash; whatever their ability or background.
           </p>
-        </Container>
+        </div>
       </section>
 
-      <section className={styles.section} id="story" aria-labelledby="story-title">
-        <Container className={styles.story}>
-          <p className={styles.eyebrow}>Our story</p>
-          <h2 id="story-title">Why we started LearnThrive</h2>
-          <p>
-            LearnThrive Tuition began with a simple belief: every student deserves
-            support that fits them — whatever their starting point, their learning
-            ability, or their background.
+      {/* ── Marquee ───────────────────────────────────── */}
+      <Marquee items={marqueeItems} />
+
+      {/* ── Story ─────────────────────────────────────── */}
+      <section id="story" className={styles.storySection}>
+        <ScrollReveal>
+          <p className={`${styles.eyebrow} ${styles.eyebrowDark}`}>Our story</p>
+          <h2 className={styles.storyTitle}>Why we started LearnThrive</h2>
+          <p className={styles.storyText}>
+            LearnThrive Tuition began with a simple belief: every student
+            deserves support that fits them &mdash; whatever their starting
+            point, their learning ability, or their background.
           </p>
-          <p>
-            Founders — and childhood friends — <strong>Abdurrahman Mustafa</strong>{" "}
-            and <strong>Tahasin Hasan</strong> set out to make great tuition
-            genuinely accessible: the kind that adapts to how each student learns,
-            rather than expecting every child to learn the same way. That belief
-            still drives everything we do.
+          <p className={styles.storyText}>
+            Founders &mdash; and childhood friends &mdash;{" "}
+            <strong style={{ color: "#143152" }}>Abdurrahman Mustafa</strong> and{" "}
+            <strong style={{ color: "#143152" }}>Tahasin Hasan</strong> set out
+            to make great tuition genuinely accessible: the kind that adapts to
+            how each student learns, rather than expecting every child to learn
+            the same way. That belief still drives everything we do.
           </p>
-        </Container>
+        </ScrollReveal>
       </section>
 
-      <section
-        className={[styles.section, styles.founders].join(" ")}
-        aria-labelledby="founders-title"
-      >
-        <Container className={styles.container}>
-          <p className={styles.eyebrow}>Meet the founders</p>
-          <h2 id="founders-title">The people behind LearnThrive</h2>
-          <div className={styles.foundersGrid}>
-            <article className={styles.founderCard} aria-labelledby="abdurrahman-name">
-              <Image
-                className={styles.portrait}
-                src="/images/abdurrahman-mustafa.jpg"
-                alt="Abdurrahman Mustafa"
-                width={64}
-                height={64}
-                sizes="64px"
-              />
-              <h3 id="abdurrahman-name">Abdurrahman Mustafa</h3>
-              <p className={styles.role}>Co-founder</p>
-              <p>
-                I&apos;m Abdurrahman Mustafa, co-founder of LearnThrive Tuition.
-                Ever since I was young, I despised the idea of tutoring and dreaded
-                attending sessions every Sunday. Then, at 17, I became the very
-                thing I&apos;d dreaded — and realised that teaching and helping
-                people who are struggling to progress is one of the most beautiful
-                things in life.
-              </p>
-              <p>
-                Over the years, as I questioned what I wanted to do and how I
-                wanted to build my future, my childhood friend Tahasin and I
-                decided to start our own tutoring service. At LearnThrive,
-                you&apos;ll do more than raise your grades — you&apos;ll grow, and
-                learn to love the very subject you&apos;re studying.
-              </p>
+      {/* ── Founders ──────────────────────────────────── */}
+      <section className={styles.foundersSection}>
+        <ScrollReveal>
+          <p className={`${styles.eyebrow} ${styles.eyebrowDark}`}>Meet the founders</p>
+          <h2 className={styles.foundersTitle}>The people behind LearnThrive</h2>
+        </ScrollReveal>
+        <div className={styles.foundersGrid}>
+          <ScrollReveal>
+            <article className={styles.founderCard}>
+              <div className={styles.founderCardInner}>
+                <Image
+                  className={styles.founderPortrait}
+                  src="/images/abdurrahman-mustafa.jpg"
+                  alt="Abdurrahman Mustafa, co-founder"
+                  width={190}
+                  height={253}
+                  sizes="(max-width: 560px) 100vw, 190px"
+                />
+                <div>
+                  <div>
+                    <h3 className={styles.founderName}>Abdurrahman Mustafa</h3>
+                    <div className={styles.founderRole}>Co-founder</div>
+                  </div>
+                  <div className={styles.founderBio}>
+                    <p>
+                      I&apos;m Abdurrahman Mustafa, co-founder of LearnThrive
+                      Tuition. Ever since I was young, I despised the idea of
+                      tutoring and dreaded attending sessions every Sunday. Then,
+                      at 17, I became the very thing I&apos;d dreaded &mdash;
+                      and realised that teaching and helping people who are
+                      struggling to progress is one of the most beautiful things
+                      in life.
+                    </p>
+                    <p>
+                      Over the years, as I questioned what I wanted to do and
+                      how I wanted to build my future, my childhood friend
+                      Tahasin and I decided to start our own tutoring service. At
+                      LearnThrive, you&apos;ll do more than raise your grades
+                      &mdash; you&apos;ll grow, and learn to love the very
+                      subject you&apos;re studying.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </article>
-            <article className={styles.founderCard} aria-labelledby="tahasin-name">
-              <Image
-                className={styles.portrait}
-                src="/images/tahasin-hasan.jpg"
-                alt="Tahasin Hasan"
-                width={64}
-                height={64}
-                sizes="64px"
-              />
-              <h3 id="tahasin-name">Tahasin Hasan</h3>
-              <p className={styles.role}>Co-founder</p>
-              <p>
-                Hi, I&apos;m Tahasin Hasan — and yes, Hasan is actually my surname,
-                not me introducing myself twice 😂. I started tutoring at 16,
-                carried it through A-levels, survived university while still
-                tutoring, and somehow ended up making mock exams for students
-                while stressing over my own exams too.
-              </p>
-              <p>
-                Over the years, I realised that most students don&apos;t struggle
-                because they &quot;can&apos;t do it&quot; — sometimes they just need
-                it explained in a way that actually makes sense to them. Now, as
-                co-founder of LearnThrive Tuition, I get to take everything
-                I&apos;ve learned from tutoring, studying and many questionable
-                sleep schedules, and use it to make education more personal,
-                enjoyable and effective.
-              </p>
+          </ScrollReveal>
+          <ScrollReveal delay={110}>
+            <article className={styles.founderCard}>
+              <div className={styles.founderCardInner}>
+                <Image
+                  className={`${styles.founderPortrait} ${styles.founderPortraitTahasin}`}
+                  src="/images/tahasin-hasan.jpg"
+                  alt="Tahasin Hasan, co-founder"
+                  width={190}
+                  height={253}
+                  sizes="(max-width: 560px) 100vw, 190px"
+                />
+                <div>
+                  <div>
+                    <h3 className={styles.founderName}>Tahasin Hasan</h3>
+                    <div className={styles.founderRole}>Co-founder</div>
+                  </div>
+                  <div className={styles.founderBio}>
+                    <p>
+                      Hi, I&apos;m Tahasin Hasan &mdash; and yes, Hasan is
+                      actually my surname, not me introducing myself twice 😂. I
+                      started tutoring at 16, carried it through A-levels,
+                      survived university while still tutoring, and somehow ended
+                      up making mock exams for students while stressing over my
+                      own exams too.
+                    </p>
+                    <p>
+                      Over the years, I realised that most students don&apos;t
+                      struggle because they &quot;can&apos;t do it&quot;
+                      &mdash; sometimes they just need it explained in a way
+                      that actually makes sense to them. Now, as co-founder of
+                      LearnThrive Tuition, I get to take everything I&apos;ve
+                      learned from tutoring, studying and many questionable sleep
+                      schedules, and use it to make education more personal,
+                      enjoyable and effective.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </article>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ── Mission ───────────────────────────────────── */}
+      <section className={styles.missionSection}>
+        <div className={styles.missionDots} aria-hidden="true" />
+        <ScrollReveal>
+          <div className={styles.missionInner}>
+            <p className={styles.eyebrow}>Our mission</p>
+            <h2 className={styles.missionTitle}>
+              A global platform where every student is understood
+            </h2>
+            <p className={styles.missionText}>
+              We&apos;re building a platform that matches students with tutors
+              who truly understand them &mdash; tutors who shape every lesson
+              around how that student learns best. Wherever a child is, and
+              whatever they need, we want the right support to be within reach.
+            </p>
           </div>
-        </Container>
+        </ScrollReveal>
       </section>
 
-      <section
-        className={[styles.section, styles.mission].join(" ")}
-        aria-labelledby="mission-title"
-      >
-        <GrowthArrow />
-        <Container className={styles.container}>
-          <p className={styles.eyebrow}>Our mission</p>
-          <h2 id="mission-title">A global platform where every student is understood</h2>
-          <p>
-            We&apos;re building a platform that matches students with tutors who
-            truly understand them — tutors who shape every lesson around how that
-            student learns best. Wherever a child is, and whatever they need, we
-            want the right support to be within reach.
-          </p>
-        </Container>
-      </section>
-
-      <section className={styles.cta} aria-labelledby="about-cta-title">
-        <Container className={styles.container}>
-          <h2 id="about-cta-title">Want to be part of it?</h2>
+      {/* ── CTA ───────────────────────────────────────── */}
+      <section className={styles.ctaSection}>
+        <ScrollReveal>
+          <h2>Want to be part of it?</h2>
           <p>
             Tell us about your child and we&apos;ll help them learn, grow and
-            thrive — one step at a time.
+            thrive &mdash; one step at a time.
           </p>
-          <ButtonLink href="/contact">Get in touch</ButtonLink>
-        </Container>
+          <a href="/#enquire" className={styles.btnPrimary}>
+            Get in touch &rarr;
+          </a>
+        </ScrollReveal>
       </section>
     </div>
   );
