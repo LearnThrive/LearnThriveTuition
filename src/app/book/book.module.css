@@ -1,0 +1,643 @@
+/* ── Book page redesign — scoped styles ─────────────────── */
+
+.page {
+  --lt-navy: #143152;
+  --lt-navy-deep: #0E2540;
+  --lt-green: #075f52;
+  --lt-green-dark: #075f52;
+  --lt-green-light: #087363;
+  --lt-cream: #F7F2E8;
+  --lt-cream-light: #FBF8F1;
+  --lt-border: #E7DFCD;
+  --lt-ink: #26333F;
+  --lt-text: #64727E;
+  --lt-font-heading: var(--font-bricolage), sans-serif;
+  --lt-font-body: var(--font-public-sans), system-ui, sans-serif;
+  --lt-font-mono: var(--font-ibm-plex-mono), monospace;
+
+  --lt-shell: 1180px;
+
+  font-family: var(--lt-font-body);
+  color: var(--lt-ink);
+  background: var(--lt-cream);
+}
+
+.page h1,
+.page h2,
+.page h3,
+.page h4 {
+  font-family: var(--lt-font-heading);
+  font-weight: 800;
+  color: var(--lt-navy);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+:global(body.is-book .site-header) {
+  background: #F7F2E8;
+  border-bottom-color: #E7DFCD;
+}
+
+.shell {
+  max-width: var(--lt-shell);
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Hero ──────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  background: var(--lt-navy);
+  color: #fff;
+  overflow: hidden;
+}
+
+.heroDots {
+  position: absolute;
+  inset: 0 55% 0 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1px);
+  background-size: 22px 22px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.heroGlow {
+  position: absolute;
+  right: -90px;
+  top: -70px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: rgba(7, 95, 82, 0.18);
+  filter: blur(10px);
+  pointer-events: none;
+  animation: lt-float 11s ease-in-out infinite;
+}
+
+.heroInner {
+  position: relative;
+  padding: 64px 40px 60px;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 56px;
+  align-items: center;
+}
+
+.eyebrow {
+  font-family: var(--lt-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lt-green-light);
+  margin-bottom: 16px;
+  animation: lt-rise 0.6s both;
+}
+
+.eyebrowDark {
+  color: var(--lt-green-dark);
+}
+
+.heroTitle {
+  font-size: clamp(34px, 4.1vw, 50px) !important;
+  line-height: 1 !important;
+  letter-spacing: -0.03em !important;
+  color: #fff !important;
+  margin: 0 0 20px !important;
+  animation: lt-rise 0.8s both 0.12s;
+}
+
+.heroMark {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.heroMarkBg {
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  bottom: 2px;
+  height: 22px;
+  background: var(--lt-green);
+  transform-origin: left;
+  animation: lt-mark 0.75s cubic-bezier(0.2, 0.8, 0.3, 1) both 0.9s;
+  border-radius: 4px;
+}
+
+.heroMarkText {
+  position: relative;
+}
+
+.heroLead {
+  font-size: 18.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.84);
+  max-width: 46ch;
+  margin: 0;
+  animation: lt-rise 0.8s both 0.3s;
+}
+
+/* Primary action, visible without scrolling */
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+  margin-top: 28px;
+  animation: lt-rise 0.8s both 0.42s;
+}
+
+.heroButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--lt-green);
+  color: #fff;
+  font-family: var(--lt-font-body);
+  font-size: 15.5px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 14px 24px;
+  border-radius: 999px;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.heroButton:hover {
+  background: var(--lt-green-light);
+  transform: translateY(-2px);
+}
+
+.heroButton svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.heroReply {
+  font-size: 14.5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Contact card — fills the empty right side of the hero */
+.heroCard {
+  position: relative;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  padding: 28px 30px;
+  animation: lt-rise 0.9s both 0.5s;
+}
+
+.heroCardTitle {
+  font-family: var(--lt-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lt-green-light);
+  margin: 0 0 18px;
+}
+
+.heroContact {
+  display: grid;
+  gap: 14px;
+  font-size: 15.5px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.heroContact a {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.heroContact a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.heroContactItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.heroContactItem:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.heroContactDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lt-green-light);
+  flex-shrink: 0;
+}
+
+/* ── Info band ─────────────────────────────────────────── */
+.infoBand {
+  background: var(--lt-cream-light);
+  border-block: 1px solid var(--lt-border);
+  padding: 42px 40px;
+}
+
+.infoBandGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.sideCard {
+  background: #fff;
+  border: 1px solid var(--lt-border);
+  border-radius: 18px;
+  padding: 26px 28px;
+}
+
+.sideCard h2 {
+  font-size: 22px !important;
+  margin: 0 0 14px !important;
+}
+
+.sideList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--lt-text);
+}
+
+.sideList li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.sideTick {
+  width: 7px;
+  height: 7px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--lt-green);
+}
+
+.infoNote {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid var(--lt-border);
+  border-left: 4px solid var(--lt-green);
+  border-radius: 18px;
+  padding: 26px 28px;
+}
+
+.infoNote h2 {
+  font-size: 22px !important;
+  margin: 0 0 8px !important;
+}
+
+.infoNote p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--lt-text);
+}
+
+/* ── Main layout ───────────────────────────────────────── */
+.bookingLayout {
+  padding: 56px 40px 72px;
+  max-width: 880px;
+}
+
+/* ── Form section ──────────────────────────────────────── */
+.formSection h2 {
+  font-size: 32px !important;
+  margin: 0 0 8px !important;
+}
+
+.formIntro {
+  margin: 0 0 24px;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--lt-text);
+  max-width: 60ch;
+}
+
+.formWrapper {
+  background: #fff;
+  border: 1px solid var(--lt-border);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 26px 50px -32px rgba(20, 49, 82, 0.55);
+}
+
+.formHead {
+  position: relative;
+  background: var(--lt-navy);
+  padding: 28px 34px;
+  overflow: hidden;
+}
+
+.formHeadDots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.13) 1px, transparent 1px);
+  background-size: 18px 18px;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.formHead h2 {
+  position: relative;
+  color: #fff !important;
+  font-size: 27px !important;
+  margin: 0 !important;
+}
+
+.formHead p {
+  position: relative;
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.74);
+  max-width: 54ch;
+}
+
+.formBody {
+  padding: 34px;
+}
+
+/* form internals (global classes from EnquiryForm) */
+.formBody :global(.form-grid) {
+  gap: 22px;
+}
+
+.formBody :global(.form-field) {
+  gap: 8px;
+}
+
+.formBody :global(.form-field) label {
+  font-family: var(--lt-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lt-navy);
+}
+
+.formBody :global(.form-field) label span {
+  letter-spacing: 0.08em;
+  color: var(--lt-text);
+}
+
+.formBody :global(.form-field) input,
+.formBody :global(.form-field) select,
+.formBody :global(.form-field) textarea {
+  width: 100%;
+  font-family: var(--lt-font-body);
+  font-size: 15.5px;
+  color: var(--lt-ink);
+  background: var(--lt-cream-light);
+  border: 1px solid var(--lt-border);
+  border-radius: 12px;
+  padding: 13px 15px;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+}
+
+.formBody :global(.form-field) select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23075f52' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M5 8l5 5 5-5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px;
+  padding-right: 42px;
+}
+
+.formBody :global(.form-field) textarea {
+  min-height: 150px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.formBody :global(.form-field) input:focus,
+.formBody :global(.form-field) select:focus,
+.formBody :global(.form-field) textarea:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--lt-green);
+  box-shadow: 0 0 0 3px rgba(7, 95, 82, 0.16);
+}
+
+.formBody :global(.field-hint) {
+  font-size: 13.5px;
+  color: var(--lt-text);
+}
+
+.formBody :global(.field-error) {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #143152;
+}
+
+/* preferred contact — radio pills */
+.formBody :global(.contact-preference) {
+  border: none;
+  padding: 0;
+  margin: 24px 0 0;
+}
+
+.formBody :global(.contact-preference) legend {
+  font-family: var(--lt-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lt-navy);
+  padding: 0;
+  margin-bottom: 10px;
+}
+
+.formBody :global(.contact-preference) > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.formBody :global(.contact-preference) label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15.5px;
+  background: var(--lt-cream-light);
+  border: 1px solid var(--lt-border);
+  border-radius: 12px;
+  padding: 13px 16px;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+}
+
+.formBody :global(.contact-preference) label:hover {
+  border-color: var(--lt-green);
+}
+
+.formBody :global(.contact-preference) label:has(input:checked) {
+  background: #fff;
+  border-color: var(--lt-green);
+  box-shadow: inset 0 0 0 1px var(--lt-green);
+}
+
+.formBody :global(.contact-preference) input {
+  accent-color: var(--lt-green);
+  width: 17px;
+  height: 17px;
+}
+
+/* actions */
+.formBody :global(.form-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--lt-border);
+}
+
+.formBody :global(.form-actions) p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--lt-text);
+  max-width: 38ch;
+}
+
+.formBody :global(.button--primary) {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--lt-green);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 15px 30px;
+  font-family: var(--lt-font-body);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.formBody :global(.button--primary):hover:not(:disabled) {
+  background: var(--lt-green-light);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 26px -18px rgba(7, 95, 82, 0.9);
+}
+
+.formBody :global(.button--primary) svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+
+.formBody :global(.button--primary):hover:not(:disabled) svg {
+  transform: translateX(4px);
+}
+
+/* ── Animations ────────────────────────────────────────── */
+@keyframes lt-rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes lt-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+
+@keyframes lt-mark {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .heroInner {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+
+  .heroTitle {
+    font-size: 38px !important;
+  }
+
+  .heroLead {
+    max-width: none;
+  }
+
+}
+
+@media (max-width: 860px) {
+  .infoBandGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .heroInner,
+  .infoBand,
+  .bookingLayout {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .formHead {
+    padding: 22px 20px;
+  }
+
+  .formBody {
+    padding: 22px 20px;
+  }
+
+  .formBody :global(.contact-preference) > div {
+    grid-template-columns: 1fr;
+  }
+
+  .heroCard {
+    padding: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page,
+  .page :global(*) {
+    animation: none !important;
+  }
+
+  .heroButton:hover,
+  .formBody :global(.button--primary):hover {
+    transform: none;
+  }
+
+  :global(.rv) {
+    opacity: 1;
+    transform: none;
+  }
+}
