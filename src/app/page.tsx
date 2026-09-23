@@ -5,9 +5,7 @@ import { BodyClass } from "@/components/BodyClass";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { Marquee } from "@/components/Marquee";
 import { StatCounter } from "@/components/StatCounter";
-import { EnquiryForm } from "@/components/EnquiryForm";
 import { createMetadata } from "@/lib/metadata";
-import { siteConfig } from "@/lib/site";
 import styles from "./home.module.css";
 
 export const metadata: Metadata = createMetadata({
@@ -102,9 +100,9 @@ export default function HomePage() {
               &mdash; from the early years right through to their A-Level exams.
             </p>
             <div className={styles.heroButtons}>
-              <a href="#enquire" className={styles.btnPrimary}>
+              <Link href="/book" className={styles.btnPrimary}>
                 Send an enquiry &rarr;
-              </a>
+              </Link>
               <a href="#how" className={styles.btnSecondary}>
                 How it works
               </a>
@@ -311,27 +309,6 @@ export default function HomePage() {
         </ScrollReveal>
       </div>
 
-      {/* ── Enquiry ───────────────────────────────────── */}
-      <section id="enquire" className={styles.enquirySection}>
-        <ScrollReveal>
-          <div className={styles.enquiryCopy}>
-            <p className={styles.eyebrow}>Get in touch today</p>
-            <h2>Let&apos;s help your child thrive</h2>
-            <p className={styles.enquiryCopyLead}>
-              Tell us a little about your child and what they need.
-              We&apos;ll reply within 24 hours &mdash; no pressure, no obligation.
-            </p>
-            <div className={styles.enquiryContact}>
-              <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>
-            </div>
-          </div>
-        </ScrollReveal>
-        <ScrollReveal delay={120}>
-          <div className={styles.enquiryFormWrapper}>
-            <EnquiryForm />
-          </div>
-        </ScrollReveal>
-      </section>
     </div>
   );
 }
