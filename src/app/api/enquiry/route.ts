@@ -97,32 +97,87 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function buildEmailHtml(data: EnquiryBody): string {
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://learnthrivetuition.co.uk";
+const LOGO_URL = `${SITE_URL}/brand/learnthrive-logo.png`;
+
+function emailWrapper(content: string): string {
   return `
-    <h2>New Enquiry from LearnThrive Tuition Website</h2>
-    <table style="border-collapse:collapse;width:100%;max-width:600px;">
-      <tr><td style="padding:8px;font-weight:bold;">Parent/Guardian</td><td style="padding:8px;">${escapeHtml(data.parentName)}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;">Email</td><td style="padding:8px;">${escapeHtml(data.email)}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;">Phone</td><td style="padding:8px;">${escapeHtml(data.phone || "Not provided")}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;">Year Group</td><td style="padding:8px;">${escapeHtml(data.yearGroup)}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;">Subject</td><td style="padding:8px;">${escapeHtml(data.subject)}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;">Preferred Contact</td><td style="padding:8px;">${escapeHtml(data.contactMethod)}</td></tr>
-      <tr><td style="padding:8px;font-weight:bold;vertical-align:top;">Support Required</td><td style="padding:8px;">${escapeHtml(data.support)}</td></tr>
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f4f1ec;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ec;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(9,29,49,0.08);">
+        <!-- Header -->
+        <tr><td style="background:#ffffff;padding:28px 32px;text-align:center;border-bottom:1px solid #d8e0df;">
+          <span style="font-size:18px;font-weight:800;color:#0e2a47;letter-spacing:-0.02em;">Learn<span style="color:#075f52;">Thrive</span> Tuition</span>
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="background:#ffffff;padding:36px 32px;">
+          ${content}
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="background:#091d31;padding:24px 32px;text-align:center;">
+          <p style="margin:0;color:#b9cbd5;font-size:13px;line-height:1.5;">
+            LearnThrive Tuition &middot; Personalised tutoring that makes a difference
+          </p>
+          <p style="margin:8px 0 0;color:#7a8f9c;font-size:12px;">
+            <a href="${SITE_URL}" style="color:#8ed2ad;text-decoration:none;">learnthrivetuition.co.uk</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+}
+
+function buildEmailHtml(data: EnquiryBody): string {
+  return emailWrapper(`
+    <h2 style="margin:0 0 24px;color:#0e2a47;font-size:22px;font-weight:800;">New Enquiry Received</h2>
+    <table style="border-collapse:collapse;width:100%;">
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;color:#0e2a47;background:#e9f5ef;border-bottom:1px solid #d8e0df;width:40%;">Parent/Guardian</td>
+        <td style="padding:12px 16px;color:#435466;background:#ffffff;border-bottom:1px solid #d8e0df;">${escapeHtml(data.parentName)}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;color:#0e2a47;background:#e9f5ef;border-bottom:1px solid #d8e0df;">Email</td>
+        <td style="padding:12px 16px;color:#435466;background:#ffffff;border-bottom:1px solid #d8e0df;">${escapeHtml(data.email)}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;color:#0e2a47;background:#e9f5ef;border-bottom:1px solid #d8e0df;">Phone</td>
+        <td style="padding:12px 16px;color:#435466;background:#ffffff;border-bottom:1px solid #d8e0df;">${escapeHtml(data.phone || "Not provided")}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;color:#0e2a47;background:#e9f5ef;border-bottom:1px solid #d8e0df;">Year Group</td>
+        <td style="padding:12px 16px;color:#435466;background:#ffffff;border-bottom:1px solid #d8e0df;">${escapeHtml(data.yearGroup)}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;color:#0e2a47;background:#e9f5ef;border-bottom:1px solid #d8e0df;">Subject</td>
+        <td style="padding:12px 16px;color:#435466;background:#ffffff;border-bottom:1px solid #d8e0df;">${escapeHtml(data.subject)}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;color:#0e2a47;background:#e9f5ef;border-bottom:1px solid #d8e0df;">Preferred Contact</td>
+        <td style="padding:12px 16px;color:#435466;background:#ffffff;border-bottom:1px solid #d8e0df;">${escapeHtml(data.contactMethod)}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;color:#0e2a47;background:#e9f5ef;vertical-align:top;">Support Required</td>
+        <td style="padding:12px 16px;color:#435466;background:#ffffff;">${escapeHtml(data.support)}</td>
+      </tr>
     </table>
-  `.trim();
+  `);
 }
 
 function buildAutoReplyHtml(name: string): string {
-  return `
-    <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#333;">
-      <h2 style="color:#2563eb;">Thank you for your enquiry, ${escapeHtml(name)}!</h2>
-      <p>We have received your enquiry and a member of the LearnThrive Tuition team will be in touch shortly.</p>
-      <p>We aim to respond to all enquiries within <strong>5 working days</strong>.</p>
-      <p>In the meantime, if you have any urgent questions, feel free to reply to this email.</p>
-      <br/>
-      <p>Kind regards,<br/><strong>The LearnThrive Tuition Team</strong></p>
-    </div>
-  `.trim();
+  return emailWrapper(`
+    <h2 style="margin:0 0 8px;color:#0e2a47;font-size:22px;font-weight:800;">Thank you for your enquiry, ${escapeHtml(name)}!</h2>
+    <div style="width:48px;height:4px;background:#075f52;border-radius:2px;margin-bottom:24px;"></div>
+    <p style="margin:0 0 16px;color:#435466;font-size:15px;line-height:1.65;">We have received your enquiry and a member of the LearnThrive Tuition team will be in touch shortly.</p>
+    <p style="margin:0 0 16px;color:#435466;font-size:15px;line-height:1.65;">We aim to respond to all enquiries within <strong style="color:#0e2a47;">5 working days</strong>.</p>
+    <p style="margin:0 0 24px;color:#435466;font-size:15px;line-height:1.65;">In the meantime, if you have any urgent questions, feel free to reply to this email.</p>
+    <p style="margin:0;color:#435466;font-size:15px;line-height:1.65;">Kind regards,<br/><strong style="color:#0e2a47;">The LearnThrive Tuition Team</strong></p>
+  `);
 }
 
 export async function POST(request: Request) {
