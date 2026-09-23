@@ -117,7 +117,7 @@ function buildAutoReplyHtml(name: string): string {
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#333;">
       <h2 style="color:#2563eb;">Thank you for your enquiry, ${escapeHtml(name)}!</h2>
       <p>We have received your enquiry and a member of the LearnThrive Tuition team will be in touch shortly.</p>
-      <p>We aim to respond to all enquiries within <strong>24 hours</strong>.</p>
+      <p>We aim to respond to all enquiries within <strong>5 working days</strong>.</p>
       <p>In the meantime, if you have any urgent questions, feel free to reply to this email.</p>
       <br/>
       <p>Kind regards,<br/><strong>The LearnThrive Tuition Team</strong></p>
