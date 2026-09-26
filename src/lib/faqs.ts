@@ -146,6 +146,19 @@ export const faqSections: readonly FaqSection[] = [
           "No. A formal diagnosis is not required. LearnThrive aims to tailor tuition to every student, whether or not they have a diagnosed condition. If you feel the learner would benefit from an adapted approach, that can be discussed during the initial consultation.",
         link: { href: "/book", label: "Start a free consultation enquiry" },
       },
+      {
+        id: "sen-sharing-information",
+        question: "Can parents share information about the learner's needs before lessons begin?",
+        answer:
+          "Yes, and it is highly recommended. When making an enquiry, parents are encouraged to share any details about the learner's needs, what works well for them and any support already in place. This helps ensure that tuition is informed and adapted from the very first lesson.",
+        link: { href: "/book", label: "Make an enquiry" },
+      },
+      {
+        id: "sen-changing-approach",
+        question: "Can the approach change if something is not working?",
+        answer:
+          "Yes. Adaptations are not fixed. If a particular strategy is not helping the learner, the approach can be adjusted. The aim is to find what works best for the individual, and that may develop over time as their needs and confidence change.",
+      },
     ],
   },
   {
