@@ -89,7 +89,7 @@ export default function AboutPage() {
         <div className={styles.foundersGrid}>
           <Reveal variant="scale">
             <PointerDepth>
-              <article className={styles.founderCard}>
+              <article className={styles.founderCard} aria-labelledby="founder-abdurrahman-mustafa">
                 <div className={styles.founderCardInner}>
                   <FounderPortraitParallax className={styles.founderPortraitWrap}>
                   <Image
@@ -103,7 +103,7 @@ export default function AboutPage() {
                   </FounderPortraitParallax>
                   <div>
                     <div>
-                      <h3 className={styles.founderName}>Abdurrahman Mustafa</h3>
+                      <h3 className={styles.founderName} id="founder-abdurrahman-mustafa">Abdurrahman Mustafa</h3>
                       <div className={styles.founderRole}>Co-founder</div>
                     </div>
                     <div className={styles.founderBio}>
@@ -132,7 +132,7 @@ export default function AboutPage() {
           </Reveal>
           <Reveal variant="scale" delay={0.11}>
             <PointerDepth>
-              <article className={styles.founderCard}>
+              <article className={styles.founderCard} aria-labelledby="founder-tahasin-hasan">
                 <div className={styles.founderCardInner}>
                   <FounderPortraitParallax className={styles.founderPortraitWrap}>
                   <Image
@@ -146,7 +146,7 @@ export default function AboutPage() {
                   </FounderPortraitParallax>
                   <div>
                     <div>
-                      <h3 className={styles.founderName}>Tahasin Hasan</h3>
+                      <h3 className={styles.founderName} id="founder-tahasin-hasan">Tahasin Hasan</h3>
                       <div className={styles.founderRole}>Co-founder</div>
                     </div>
                     <div className={styles.founderBio}>
@@ -221,8 +221,8 @@ export default function AboutPage() {
             Tell us about your child and we&apos;ll help them learn, grow and
             thrive &mdash; one step at a time.
           </p>
-          <Link href="/book" className={styles.btnPrimary}>
-            Get in touch &rarr;
+          <Link href="/contact" className={styles.btnPrimary}>
+            Get in touch <span aria-hidden="true">&rarr;</span>
           </Link>
         </Reveal>
       </section>

@@ -538,6 +538,23 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* The 11+ card used to be a dead end: Maths, English and Science each link through to their landing
+   page, but this one did not. Same weight and arrow as .subjectExploreLink, in the brighter green
+   that clears contrast on the navy card. */
+.elevenPlusLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  font-weight: 700;
+  color: #13c2a0;
+  text-decoration: none;
+}
+
+.elevenPlusLink:hover {
+  text-decoration: underline;
+}
+
 /* ── CTA ───────────────────────────────────────────────── */
 .ctaSection {
   padding: 72px 40px;

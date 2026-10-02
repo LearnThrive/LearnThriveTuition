@@ -88,6 +88,41 @@ async function auditA11y(page) {
   });
 }
 
+// Scroll the whole page so every reveal fires, then wait for those animations to finish. Auditing a
+// page that is still mid-fade measures transient opacity (axe blends it into the colour contrast),
+// which reports contrast failures a visitor never sees on the settled page.
+async function settleReveals(page) {
+  await page.evaluate(async () => {
+    const step = Math.max(300, innerHeight * 0.6);
+    for (let y = 0; y <= document.documentElement.scrollHeight; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((done) => setTimeout(done, 120));
+    }
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+    window.scrollTo(0, 0);
+  });
+  await page.waitForTimeout(250);
+}
+
+// Wait for in-flight (finite) animations to complete, e.g. a message fading in, so an audit sees the
+// settled colours rather than a half-faded frame.
+async function finishAnimations(page) {
+  await page.evaluate(async () => {
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
+  await page.waitForTimeout(100);
+}
+
 async function run() {
   assert.ok(existsSync(resolve(root, ".next")), "Run npm run build before browser checks.");
   await mkdir(screenshotDir, { recursive: true });
@@ -114,8 +149,13 @@ async function run() {
     const internalPaths = new Set(primaryRoutes);
     const auditSummary = [];
 
+    // The enquiry-failure test deliberately answers the API with a 503; the browser logs that as a
+    // console error, which is expected there and nowhere else.
+    let expectingEnquiryFailure = false;
     page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(`${page.url()}: ${message.text()}`);
+      if (message.type() !== "error") return;
+      if (expectingEnquiryFailure && /status of 503/.test(message.text())) return;
+      consoleErrors.push(`${page.url()}: ${message.text()}`);
     });
     page.on("pageerror", (error) => pageErrors.push(`${page.url()}: ${error.message}`));
     page.on("request", (request) => {
@@ -171,7 +211,8 @@ async function run() {
 
       if (route === "/about") {
         for (const name of ["Abdurrahman Mustafa", "Tahasin Hasan"]) {
-          const portrait = page.getByRole("img", { name, exact: true });
+          // The portrait's accessible name is "<Name>, co-founder"; the heading below is the bare name.
+          const portrait = page.getByRole("img", { name: `${name}, co-founder`, exact: true });
           assert.equal(await portrait.count(), 1, `About needs ${name}'s supplied portrait`);
           await portrait.scrollIntoViewIfNeeded();
           await portrait.evaluate((image) => image.decode());
@@ -209,6 +250,7 @@ async function run() {
       }
       assert.equal(await page.locator('a[href="tel:+442080591035"]').count(), 0);
 
+      await settleReveals(page);
       const axeResults = await auditA11y(page);
       assert.deepEqual(axeResults, [], `${route} has serious axe violations`);
 
@@ -230,7 +272,26 @@ async function run() {
 
     await page.goto(`${baseUrl}/faq`, { waitUntil: "domcontentloaded" });
     const faqItems = page.locator("main details.faq-item");
-    assert.equal(await faqItems.count(), 29, "FAQ page should render all 29 questions");
+    // The jump navigation lists every category with its question count, so the expected total is
+    // read from the page itself rather than a number that goes stale whenever a question is added.
+    const jumpCounts = await page
+      .locator("nav[aria-label='FAQ categories'] a")
+      .evaluateAll((links) =>
+        links.map((link) => Number(link.lastElementChild?.textContent?.trim())),
+      );
+    assert.ok(jumpCounts.length >= 6 && jumpCounts.every(Number.isInteger), "FAQ jump nav should list every category with its count");
+    const expectedFaqTotal = jumpCounts.reduce((sum, count) => sum + count, 0);
+    assert.equal(await faqItems.count(), expectedFaqTotal, `FAQ page should render all ${expectedFaqTotal} questions`);
+    assert.equal(
+      await page.getByRole("heading", { name: "Special educational needs", exact: true }).count(),
+      1,
+      "FAQ page must keep its special educational needs section",
+    );
+    assert.equal(
+      await page.locator("nav[aria-label='FAQ categories'] a", { hasText: "Special educational needs" }).count(),
+      1,
+      "FAQ jump navigation must list the special educational needs section",
+    );
     const firstFaq = faqItems.first();
     const firstSummary = firstFaq.locator("summary");
     await firstSummary.focus();
@@ -249,20 +310,15 @@ async function run() {
         answer: item.querySelector(".faq-item__answer").textContent.trim(),
       }])),
     );
-    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    const preview = page.locator(".faq-preview-section");
-    const previewItems = await preview.locator("details").evaluateAll((items) =>
-      items.map((item) => ({
-        id: item.id,
-        question: item.querySelector("summary").textContent.trim(),
-        answer: item.querySelector(".faq-item__answer").textContent.trim(),
-      })),
-    );
-    assert.equal(previewItems.length, 5, "Home should show five FAQ questions");
-    for (const { id, ...content } of previewItems) {
-      assert.deepEqual(content, fullFaqContent[id], `Home FAQ ${id} diverges from the full answer`);
+    for (const [id, content] of Object.entries(fullFaqContent)) {
+      assert.ok(content.question && content.answer, `FAQ ${id} needs both a question and an answer`);
     }
-    await preview.getByRole("link", { name: "View all FAQs" }).click();
+    // The homepage no longer carries an FAQ preview: the FAQ is reached through the main navigation.
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+    await page
+      .getByRole("navigation", { name: "Main navigation" })
+      .getByRole("link", { name: "FAQ", exact: true })
+      .click();
     await page.waitForURL(`${baseUrl}/faq`);
 
     const noJsContext = await browser.newContext({ javaScriptEnabled: false });
@@ -284,13 +340,21 @@ async function run() {
 
     for (const sourceRoute of ["/", "/subjects"]) {
       await page.goto(`${baseUrl}${sourceRoute}`, { waitUntil: "domcontentloaded" });
-      for (const { path, ctaLabel } of subjectLandingRoutes) {
+      // The subject cards on the homepage and the "Explore ... in depth" links on /subjects name
+      // the subject; each must be a visible link to that subject's landing page.
+      const subjectNames = {
+        "/maths-tuition": "Maths",
+        "/english-tuition": "English",
+        "/science-tuition": "Science",
+        "/11-plus-tuition": "11+",
+      };
+      for (const { path } of subjectLandingRoutes) {
         const subjectLink = page.locator(`main a[href="${path}"]`, {
-          hasText: ctaLabel,
+          hasText: subjectNames[path],
         });
         assert.ok(
           (await subjectLink.count()) > 0 && (await subjectLink.first().isVisible()),
-          `${sourceRoute} needs a visible ${ctaLabel} link to ${path}`,
+          `${sourceRoute} needs a visible ${subjectNames[path]} link to ${path}`,
         );
       }
     }
@@ -327,6 +391,7 @@ async function run() {
         );
 
         if (viewport.width === 390 && ["/about", "/contact", "/faq", "/privacy", "/cookies", "/terms", "/safeguarding"].includes(route)) {
+          await settleReveals(page);
           assert.deepEqual(await auditA11y(page), [], `${route} has serious mobile axe violations`);
         }
 
@@ -361,34 +426,146 @@ async function run() {
       "Open main menu",
     );
 
+    // The mobile menu's backdrop dims the page and dismisses the menu when tapped.
+    await menuButton.click();
+    assert.equal(await menuButton.getAttribute("aria-expanded"), "true");
+    assert.equal(
+      await page.locator(".navigation-backdrop").evaluate((element) => getComputedStyle(element).pointerEvents),
+      "auto",
+      "The open menu's backdrop must catch taps",
+    );
+    await page.mouse.click(195, 820);
+    assert.equal(await menuButton.getAttribute("aria-expanded"), "false", "Tapping the backdrop should close the menu");
+
+    // The enquiry API is answered by this test, so no email is ever sent. What matters here is what
+    // the browser does: validation, the request it makes, and how it reports success and failure.
+    const enquiryRequests = [];
+    let enquiryResponse = "ok";
+    await page.route("**/api/enquiry", async (route) => {
+      enquiryRequests.push(JSON.parse(route.request().postData() ?? "{}"));
+      if (enquiryResponse === "ok") {
+        await route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' });
+      } else {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "Enquiries are not accepting submissions right now." }),
+        });
+      }
+    });
+    const fillEnquiry = async () => {
+      await page.getByLabel("Parent or guardian name").fill("Test Parent");
+      await page.getByLabel("Email address").fill("test@example.com");
+      await page.getByLabel(/Student.s year group/).selectOption({ label: "Year 9" });
+      await page.getByLabel("Subject").selectOption({ label: "Maths" });
+      await page
+        .getByLabel("What support are you looking for?")
+        .fill("Support with algebra confidence and structured revision practice.");
+    };
+
     await page.goto(`${baseUrl}/book`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "Prepare enquiry email" }).click();
+    await settleReveals(page);
+    await page.getByRole("button", { name: "Send enquiry" }).click();
     assert.ok(await page.locator(".form-message--error").isVisible());
+    assert.equal(enquiryRequests.length, 0, "An invalid form must not be sent");
+    // Focus moves on the next animation frame, so wait for it rather than reading it once.
+    await page.waitForFunction(
+      () => Boolean(document.activeElement?.closest(".form-message--error")),
+      undefined,
+      { timeout: 3000 },
+    ).catch(() => assert.fail("Focus should move to the error summary"));
+    await finishAnimations(page);
     assert.deepEqual(
       await auditA11y(page),
       [],
       "The form error state has serious axe violations",
     );
-    await page.getByLabel("Parent or guardian name").fill("Test Parent");
-    await page.getByLabel("Email address").fill("test@example.com");
-    await page.getByLabel("Student’s year group").selectOption({ label: "Year 9" });
-    await page.getByLabel("Subject").selectOption({ label: "Maths" });
-    await page
-      .getByLabel("What support are you looking for?")
-      .fill("Support with algebra confidence and structured revision practice.");
+    await fillEnquiry();
     await page.locator('input[name="contactMethod"][value="Phone"]').check();
-    await page.getByRole("button", { name: "Prepare enquiry email" }).click();
+    await page.getByRole("button", { name: "Send enquiry" }).click();
     assert.match(
       await page.locator("#phone-error").innerText(),
       /phone number when phone is your preferred contact method/i,
     );
+    assert.equal(enquiryRequests.length, 0, "A missing phone number must block the request");
     await page.getByLabel(/Phone number/).fill("020 0000 0000");
-    await page.getByRole("button", { name: "Prepare enquiry email" }).click();
-    const prepared = page.locator(".form-message--prepared");
-    await prepared.waitFor({ state: "visible" });
-    assert.match(await prepared.innerText(), /No information has been submitted/i);
-    const mailLink = page.getByRole("link", { name: "Open email to review and send" });
-    assert.match(await mailLink.getAttribute("href"), /^mailto:info@learnthrivetuition\.co\.uk/);
+    await page.getByRole("button", { name: "Send enquiry" }).click();
+    const sent = page.locator(".form-message--success");
+    await sent.waitFor({ state: "visible" });
+    assert.equal(enquiryRequests.length, 1, "A valid form sends exactly one request");
+    assert.deepEqual(
+      Object.keys(enquiryRequests[0]).sort(),
+      ["contactMethod", "email", "parentName", "phone", "subject", "support", "yearGroup"],
+      "The enquiry payload must match what the API validates",
+    );
+    assert.equal(enquiryRequests[0].contactMethod, "Phone");
+    assert.match(await sent.innerText(), /Your enquiry has been sent/i);
+    assert.doesNotMatch(
+      await page.locator("main").innerText(),
+      /prepare|draft|email app|review and send|No information has been submitted/i,
+      "The success state must describe the direct-send flow",
+    );
+    assert.equal(await page.locator('a[href^="mailto:"][href*="subject="]').count(), 0, "No mailto draft link may be offered");
+
+    enquiryResponse = "fail";
+    expectingEnquiryFailure = true;
+    await page.goto(`${baseUrl}/book`, { waitUntil: "domcontentloaded" });
+    await settleReveals(page);
+    await fillEnquiry();
+    await page.getByRole("button", { name: "Send enquiry" }).click();
+    const failed = page.getByRole("alert").filter({ hasText: "not accepting submissions" });
+    await failed.waitFor({ state: "visible" });
+    expectingEnquiryFailure = false;
+    await page.waitForFunction(
+      () => Boolean(document.activeElement?.closest("[role=alert]")),
+      undefined,
+      { timeout: 3000 },
+    ).catch(() => assert.fail("Focus should move to the server error"));
+    await finishAnimations(page);
+    assert.deepEqual(await auditA11y(page), [], "The form server-error state has serious axe violations");
+    await page.unroute("**/api/enquiry");
+
+    // Reduced motion: nothing may be held back by a reveal, and nothing may loop forever.
+    const reducedContext = await browser.newContext({
+      locale: "en-GB",
+      reducedMotion: "reduce",
+      viewport: { width: 1440, height: 900 },
+    });
+    const reducedPage = await reducedContext.newPage();
+    for (const route of primaryRoutes) {
+      await reducedPage.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
+      await reducedPage.locator("main h1").waitFor({ state: "visible" });
+      await reducedPage.waitForTimeout(350);
+      const reduced = await reducedPage.evaluate(() => ({
+        held: [...document.querySelectorAll("[data-reveal], [data-reveal-inner], [data-masked-text-inner]")]
+          .filter((element) => getComputedStyle(element).opacity === "0")
+          .map((element) => `${element.tagName}.${String(element.className).slice(0, 40)}`),
+        looping: document
+          .getAnimations()
+          .filter((animation) => animation.playState === "running" && animation.effect?.getTiming().iterations === Infinity)
+          .map((animation) => animation.animationName ?? animation.constructor.name),
+      }));
+      assert.deepEqual(reduced.held, [], `${route} holds content behind a reveal under reduced motion`);
+      assert.deepEqual(reduced.looping, [], `${route} loops an animation under reduced motion`);
+      assert.deepEqual(await auditA11y(reducedPage), [], `${route} has serious axe violations under reduced motion`);
+    }
+    await reducedContext.close();
+
+    // Without JavaScript a reveal's server-rendered start state would hide everything below the
+    // fold; the <noscript> override in the root layout must keep it all visible.
+    const bareContext = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
+    const barePage = await bareContext.newPage();
+    for (const route of ["/", "/subjects", "/about", "/safeguarding"]) {
+      await barePage.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
+      const hiddenWithoutScript = await barePage.evaluate(() =>
+        [...document.querySelectorAll("[data-reveal], [data-reveal-inner]")]
+          .filter((element) => getComputedStyle(element).opacity === "0")
+          .map((element) => String(element.className).slice(0, 40)),
+      );
+      assert.deepEqual(hiddenWithoutScript, [], `${route} hides content when JavaScript is off`);
+    }
+    await bareContext.close();
+
     assert.deepEqual(await context.cookies(), [], "The application unexpectedly set cookies");
     assert.deepEqual(
       await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length })),

@@ -190,7 +190,7 @@ export default function SubjectsPage() {
               Just starting out? We also support{" "}
               <strong style={{ color: "#143152" }}>early years and Key Stage 1 (Year 1&ndash;2)</strong>.
               The stages below begin at Key Stage 2 &mdash; for younger learners,{" "}
-              <Link href="/book">get in touch</Link> and we&apos;ll tailor
+              <Link href="/contact">get in touch</Link> and we&apos;ll tailor
               sessions to where your child is.
             </p>
           </div>
@@ -340,6 +340,9 @@ export default function SubjectsPage() {
                 Every learner is supported to reach their full potential &mdash;
                 one step at a time.
               </p>
+              <Link href="/11-plus-tuition" className={styles.elevenPlusLink}>
+                Explore 11+ Preparation in depth <span aria-hidden="true">&rarr;</span>
+              </Link>
             </div>
           </div>
         </Reveal>
