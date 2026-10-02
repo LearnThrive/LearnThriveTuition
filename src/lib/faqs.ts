@@ -28,8 +28,8 @@ export const faqSections: readonly FaqSection[] = [
         id: "how-to-get-started",
         question: "How do I get started with LearnThrive Tuition?",
         answer:
-          "Begin with a free consultation enquiry. You can share the student’s year group, subject and a brief outline of the support required. The booking form prepares an email on your device for you to review and send.",
-        link: { href: "/book", label: "Prepare a consultation enquiry" },
+          "Begin with a free consultation enquiry. You can share the student’s year group, subject and a brief outline of the support required. The booking form sends your enquiry directly to LearnThrive, and you'll get a confirmation email once it's received.",
+        link: { href: "/book", label: "Start a consultation enquiry" },
       },
       {
         id: "after-enquiry",
@@ -124,14 +124,15 @@ export const faqSections: readonly FaqSection[] = [
   {
     id: "sen-support",
     title: "Special educational needs",
-    intro: "How LearnThrive's tuition can be adapted for learners with additional needs. LearnThrive is a tuition service and does not provide specialist diagnostic or therapeutic support.",
+    intro:
+      "How LearnThrive's tuition can be adapted for learners with additional needs. LearnThrive is a tuition service and does not provide specialist diagnostic or therapeutic support.",
     items: [
       {
         id: "sen-support-available",
         question: "Does LearnThrive support learners with special educational needs?",
         answer:
-          "Yes. LearnThrive's personalised approach means that tuition can be adapted to support learners with additional needs. The focus remains on building understanding and confidence at a pace that suits the individual learner.",
-        link: { href: "/book", label: "Discuss the learner's needs" },
+          "Yes. LearnThrive’s personalised approach means that tuition can be adapted to support learners with additional needs. The focus remains on building understanding and confidence at a pace that suits the individual learner.",
+        link: { href: "/book", label: "Discuss the learner’s needs" },
       },
       {
         id: "sen-lesson-adaptations",
@@ -150,7 +151,7 @@ export const faqSections: readonly FaqSection[] = [
         id: "sen-sharing-information",
         question: "Can parents share information about the learner's needs before lessons begin?",
         answer:
-          "Yes, and it is highly recommended. When making an enquiry, parents are encouraged to share any details about the learner's needs, what works well for them and any support already in place. This helps ensure that tuition is informed and adapted from the very first lesson.",
+          "Yes, and it is highly recommended. When making an enquiry, parents are encouraged to share any details about the learner’s needs, what works well for them and any support already in place. This helps ensure that tuition is informed and adapted from the very first lesson.",
         link: { href: "/book", label: "Make an enquiry" },
       },
       {
