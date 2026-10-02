@@ -41,7 +41,7 @@ export function HeroScene() {
       <ParallaxLayer progress={smoothProgress} from={0} to={16} className={styles.heroDots} aria-hidden />
       <div className={styles.heroGlow} aria-hidden="true" />
       <div className={styles.heroGrid}>
-        <m.div style={{ y: headlineY }}>
+        <m.div style={{ y: headlineY }} className={styles.heroCopyWrap}>
           <div className={styles.heroCopy}>
             <div className={styles.heroChip}>
               <span className={styles.heroChipDot} aria-hidden="true" />

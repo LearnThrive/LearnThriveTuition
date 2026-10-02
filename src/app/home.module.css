@@ -103,8 +103,19 @@
   min-height: clamp(470px, 86vh, 920px);
 }
 
+/* The hero is 86vh tall (up to 920px); a copy block pinned to the top left a quarter of the panel
+   empty beneath it, so the column centres it vertically instead. */
+.heroCopyWrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .heroCopy {
-  padding: 60px 44px 60px 40px;
+  /* On very wide screens the photo still bleeds to the right edge, so the copy moves in with the
+     page's own centred column rather than staying 40px from the far left, which left 600px of
+     empty navy between the two on a 2560px display. The clamp is inert below 1760px. */
+  padding: 60px 44px 60px max(40px, calc((100vw - 1760px) / 2 + 40px));
 }
 
 .heroChip {
