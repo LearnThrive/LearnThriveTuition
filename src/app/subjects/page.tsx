@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { BodyClass } from "@/components/BodyClass";
-import { ScrollReveal } from "@/components/ScrollReveal";
+import { AnimatedUnderline } from "@/components/motion/primitives/AnimatedUnderline";
+import { Reveal } from "@/components/motion/primitives/Reveal";
+import { PointerDepth } from "@/components/motion/primitives/PointerDepth";
+import { SubjectsHeroScene, SubjectsListScene, SubjectIconScene } from "@/components/motion/scenes/SubjectsScene";
+import { SubjectSectionMotif } from "@/components/motion/scenes/SubjectSectionMotif";
+import { ElevenPlusMotif } from "@/components/motion/scenes/ElevenPlusMotif";
 import { Marquee } from "@/components/Marquee";
 import { createMetadata } from "@/lib/metadata";
 import styles from "./subjects.module.css";
@@ -142,43 +147,40 @@ export default function SubjectsPage() {
       <BodyClass className="is-subjects" />
 
       {/* ── Hero ──────────────────────────────────────── */}
-      <section className={styles.hero}>
-        <div className={styles.heroDots} aria-hidden="true" />
-        <div className={styles.heroGlow} aria-hidden="true" />
-        <div className={styles.heroInner}>
-          <p className={styles.eyebrow}>What we teach</p>
-          <h1 className={styles.heroTitle}>
-            Subjects we{" "}
-            <span className={styles.heroMark}>
-              <span className={styles.heroMarkBg} aria-hidden="true" />
-              <span className={styles.heroMarkText}>cover</span>
-            </span>
-          </h1>
-          <p className={styles.heroLead}>
-            Maths, English and Science from Key Stage 2 through to A-Level,
-            plus dedicated 11+ preparation. Here&apos;s how the support grows
-            with your child at each stage.
-          </p>
-          <nav aria-label="Jump to a subject">
-            <ul className={styles.heroJump}>
-              {jumpLinks.map((link) => (
-                <li key={link.href}>
-                  <a href={link.href} className={styles.heroJumpLink}>
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
-      </section>
+      <SubjectsHeroScene>
+        <p className={styles.eyebrow}>What we teach</p>
+        <h1 className={styles.heroTitle}>
+          Subjects we{" "}
+          <span className={styles.heroMark}>
+            <span className={styles.heroMarkBg} aria-hidden="true" />
+            <span className={styles.heroMarkText}>cover</span>
+          </span>
+        </h1>
+        <p className={styles.heroLead}>
+          Maths, English and Science from Key Stage 2 through to A-Level,
+          plus dedicated 11+ preparation. Here&apos;s how the support grows
+          with your child at each stage.
+        </p>
+        <nav aria-label="Jump to a subject">
+          <ul className={styles.heroJump}>
+            {jumpLinks.map((link) => (
+              <li key={link.href}>
+                <a href={link.href} className={styles.heroJumpLink}>
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </SubjectsHeroScene>
 
       {/* ── Marquee ───────────────────────────────────── */}
       <Marquee items={marqueeItems} />
 
       {/* ── Early years callout ────────────────────────── */}
       <div className={styles.calloutWrap}>
-        <ScrollReveal>
+        {/* First content below the hero on a phone, so its text is the LCP candidate there. */}
+        <Reveal variant="static">
           <div className={styles.callout}>
             <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "#075f52", flexShrink: 0, marginTop: 2 }} aria-hidden="true">
               <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
@@ -188,17 +190,27 @@ export default function SubjectsPage() {
               Just starting out? We also support{" "}
               <strong style={{ color: "#143152" }}>early years and Key Stage 1 (Year 1&ndash;2)</strong>.
               The stages below begin at Key Stage 2 &mdash; for younger learners,{" "}
-              <Link href="/#enquire">get in touch</Link> and we&apos;ll tailor
+              <Link href="/book">get in touch</Link> and we&apos;ll tailor
               sessions to where your child is.
             </p>
           </div>
-        </ScrollReveal>
+        </Reveal>
       </div>
 
       {/* ── Subject Sections ──────────────────────────── */}
-      {subjects.map((subject) => (
+      <SubjectsListScene>
+      {subjects.map((subject, subjectIndex) => (
         <section key={subject.id} id={subject.id} className={styles.subjectSection}>
-          <ScrollReveal>
+          <div className={styles.subjectMotifLayer}>
+            <SubjectSectionMotif
+              kind={subject.id as "maths" | "english" | "science"}
+              range={[subjectIndex / subjects.length, (subjectIndex + 1) / subjects.length]}
+            />
+          </div>
+          {/* The first subject is on the first screen, and its photograph is the page's largest
+              paint. A reveal would hold it at opacity 0 until the script has loaded and the animation
+              has run (LCP 204 -> 864 ms in the profile), so it is simply there; later ones reveal. */}
+          <Reveal variant={subjectIndex === 0 ? "static" : "soft"}>
             <div className={`${styles.subjectHeader} ${subject.reverse ? styles.subjectHeaderReverse : ""}`}>
               {subject.reverse ? (
                 <>
@@ -213,30 +225,48 @@ export default function SubjectsPage() {
                   </div>
                   <div>
                     <div className={styles.subjectTitleRow}>
-                      <div className={styles.subjectIcon}>
+                      <SubjectIconScene range={[subjectIndex / subjects.length, (subjectIndex + 1) / subjects.length]}>
                         <SubjectSvg icon={subject.icon} />
-                      </div>
+                      </SubjectIconScene>
                       <div>
-                        <h2 className={styles.subjectTitle}>{subject.title}</h2>
+                        <h2 className={styles.subjectTitle}>
+                          {subject.id === "english" ? (
+                            <AnimatedUnderline drawOnView>{subject.title}</AnimatedUnderline>
+                          ) : (
+                            subject.title
+                          )}
+                        </h2>
                         <div className={styles.subjectRange}>{subject.range}</div>
                       </div>
                     </div>
                     <p className={styles.subjectDesc}>{subject.description}</p>
+                    <Link href={`/${subject.id}-tuition`} className={styles.subjectExploreLink}>
+                      Explore {subject.title} in depth <span aria-hidden="true">&rarr;</span>
+                    </Link>
                   </div>
                 </>
               ) : (
                 <>
                   <div>
                     <div className={styles.subjectTitleRow}>
-                      <div className={styles.subjectIcon}>
+                      <SubjectIconScene range={[subjectIndex / subjects.length, (subjectIndex + 1) / subjects.length]}>
                         <SubjectSvg icon={subject.icon} />
-                      </div>
+                      </SubjectIconScene>
                       <div>
-                        <h2 className={styles.subjectTitle}>{subject.title}</h2>
+                        <h2 className={styles.subjectTitle}>
+                          {subject.id === "english" ? (
+                            <AnimatedUnderline drawOnView>{subject.title}</AnimatedUnderline>
+                          ) : (
+                            subject.title
+                          )}
+                        </h2>
                         <div className={styles.subjectRange}>{subject.range}</div>
                       </div>
                     </div>
                     <p className={styles.subjectDesc}>{subject.description}</p>
+                    <Link href={`/${subject.id}-tuition`} className={styles.subjectExploreLink}>
+                      Explore {subject.title} in depth <span aria-hidden="true">&rarr;</span>
+                    </Link>
                   </div>
                   <div className={styles.subjectImage}>
                     <Image
@@ -250,7 +280,7 @@ export default function SubjectsPage() {
                 </>
               )}
             </div>
-          </ScrollReveal>
+          </Reveal>
 
           <div className={styles.levelCards}>
             {subject.levels.map((level, i) => {
@@ -258,34 +288,38 @@ export default function SubjectsPage() {
               const isGcse = level.name === "GCSE" && isScience;
 
               return (
-                <ScrollReveal key={level.name} delay={i * 90}>
-                  <div className={`${styles.levelCard} ${level.dark ? styles.levelCardDark : ""}`}>
-                    <div className={styles.levelCardHeader}>
-                      <span className={styles.levelCardNumber}>{i + 1}</span>
-                      <b className={styles.levelCardName}>{level.name}</b>
-                    </div>
-                    {isGcse ? (
-                      <div className={styles.scienceBreakdown}>
-                        <p><b>Biology</b> &mdash; cells, genetics and ecosystems, understood clearly and confidently.</p>
-                        <p><b>Chemistry</b> &mdash; atoms, bonding and reactions, taught through simulations and visuals.</p>
-                        <p><b>Physics</b> &mdash; forces, energy and electricity, connected to real-world ideas.</p>
+                <Reveal variant="scale" key={level.name} delay={i * 0.09}>
+                  <PointerDepth>
+                    <div className={`${styles.levelCard} ${level.dark ? styles.levelCardDark : ""}`}>
+                      <div className={styles.levelCardHeader}>
+                        <span className={styles.levelCardNumber}>{i + 1}</span>
+                        <b className={styles.levelCardName}>{level.name}</b>
                       </div>
-                    ) : (
-                      <p className={styles.levelCardText}>{level.text}</p>
-                    )}
-                  </div>
-                </ScrollReveal>
+                      {isGcse ? (
+                        <div className={styles.scienceBreakdown}>
+                          <p><b>Biology</b> &mdash; cells, genetics and ecosystems, understood clearly and confidently.</p>
+                          <p><b>Chemistry</b> &mdash; atoms, bonding and reactions, taught through simulations and visuals.</p>
+                          <p><b>Physics</b> &mdash; forces, energy and electricity, connected to real-world ideas.</p>
+                        </div>
+                      ) : (
+                        <p className={styles.levelCardText}>{level.text}</p>
+                      )}
+                    </div>
+                  </PointerDepth>
+                </Reveal>
               );
             })}
           </div>
         </section>
       ))}
+      </SubjectsListScene>
 
       {/* ── 11+ Preparation ───────────────────────────── */}
       <section id="eleven-plus" className={styles.elevenPlusSection}>
-        <ScrollReveal>
+        <Reveal variant="scale">
           <div className={styles.elevenPlusCard}>
             <div className={styles.elevenPlusDots} aria-hidden="true" />
+            <ElevenPlusMotif />
             <div className={styles.elevenPlusInner}>
               <p className={styles.eyebrow}>Entrance exams</p>
               <h2 className={styles.elevenPlusTitle}>11+ Preparation</h2>
@@ -308,21 +342,21 @@ export default function SubjectsPage() {
               </p>
             </div>
           </div>
-        </ScrollReveal>
+        </Reveal>
       </section>
 
       {/* ── CTA ───────────────────────────────────────── */}
       <section className={styles.ctaSection}>
-        <ScrollReveal>
+        <Reveal variant="soft">
           <h2>Found the right fit for your child?</h2>
           <p>
             Tell us what they need and we&apos;ll match them with the right
             support &mdash; from first steps to final exams.
           </p>
-          <a href="/#enquire" className={styles.btnPrimary}>
+          <Link href="/book" className={styles.btnPrimary}>
             Send an enquiry &rarr;
-          </a>
-        </ScrollReveal>
+          </Link>
+        </Reveal>
       </section>
     </div>
   );
