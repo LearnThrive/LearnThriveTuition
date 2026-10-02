@@ -2781,11 +2781,10 @@ ol {
    IntersectionObserver rather than a scroll listener — see that file's own comment. A left border
    plus colour/weight, not a moving element, so this never fights the sticky sidebar's own layout. */
 .legal-contents a[aria-current="true"] {
-  padding-left: 0.6rem;
-  border-left: 2px solid var(--colour-green-700);
+  border-left-color: var(--colour-green-700);
   color: var(--colour-green-800);
   font-weight: 700;
-  transition: border-color var(--duration-fast) ease, padding-left var(--duration-fast) ease;
+  transition: border-color var(--duration-fast) ease;
 }
 
 .legal-contents h2 {
@@ -2801,9 +2800,15 @@ ol {
   padding-left: 1.2rem;
 }
 
+/* Block, not inline-block: an inline-block's baseline is its last line, so a link that wrapped onto
+   two lines dragged its list number down beside the second line. The indent and (transparent)
+   border are reserved on every link so the highlighted section's border appears without shifting
+   the text sideways. */
 .legal-contents a {
-  display: inline-block;
+  display: block;
   padding-block: 0.4rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid transparent;
   font-size: 0.92rem;
   line-height: 1.45;
 }
