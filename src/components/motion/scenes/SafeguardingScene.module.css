@@ -1,0 +1,88 @@
+.pipeline {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.stage {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding-bottom: 18px;
+  position: relative;
+}
+
+.stage:last-child {
+  padding-bottom: 0;
+}
+
+.stageLine {
+  position: absolute;
+  left: 11px;
+  top: 26px;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.stageLineFill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: #8ed2ad;
+  transform-origin: top;
+}
+
+.stageDot {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  display: grid;
+  place-items: center;
+  z-index: 1;
+  background: var(--lt-navy, #0e2a47);
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.stageDotActive {
+  border-color: #8ed2ad;
+  background: #8ed2ad;
+}
+
+.stageDotActive svg {
+  color: var(--lt-navy);
+}
+
+.stageDot svg {
+  width: 13px;
+  height: 13px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.stageBody {
+  padding-top: 1px;
+}
+
+.stageTitle {
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  transition: opacity 0.3s ease;
+}
+
+/* Dimmed, not disabled: it is still the text of a step the visitor needs to read. White at 0.55 on
+   this navy is 5.4:1; the previous 0.45 measured 4.1:1, under the 4.5:1 minimum for body text. */
+.stageTitleInactive {
+  opacity: 0.55;
+}
+
+/* Dimming is a scroll cue. With reduced motion there is no scroll cue, and the scene's React state
+   only catches up after hydration, so the CSS states the outcome directly: every stage reads in full. */
+@media (prefers-reduced-motion: reduce) {
+  .stageTitleInactive {
+    opacity: 1;
+  }
+}

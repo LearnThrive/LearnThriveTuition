@@ -32,11 +32,13 @@
   padding: clamp(64px, 8vw, 120px) clamp(20px, 4vw, 40px);
 }
 
-/* Full-bleed, flagship-only sections (hero, product story, closing CTA) — min-height so the section
-   itself carries the cinematic scale, never a fixed height, so real content is never clipped. */
+/* Full-bleed, flagship-only sections (the closing CTA) — min-height so the section itself carries
+   the cinematic scale, never a fixed height, so real content is never clipped. Capped rather than
+   a full viewport: a short closing statement centred in 100svh left roughly 330px of empty navy
+   above and below it on a 900px-tall screen. */
 .intensityFlagship {
-  padding: clamp(80px, 12vw, 180px) clamp(20px, 4vw, 40px);
-  min-height: 100svh;
+  padding: clamp(72px, 9vw, 130px) clamp(20px, 4vw, 40px);
+  min-height: min(100svh, 560px);
   display: flex;
   flex-direction: column;
   justify-content: center;
