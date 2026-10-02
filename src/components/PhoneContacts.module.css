@@ -35,6 +35,13 @@
   overflow-wrap: anywhere;
 }
 
-.number {
-  overflow-wrap: anywhere;
+/* Inline contacts flow as ordinary text rather than as flex rows, so a sentence's closing punctuation
+   (PhoneContacts' suffix) stays attached to the last number instead of wrapping onto a line of its
+   own. The stacked layout keeps its flex column. */
+.inline .contact {
+  display: block;
+}
+
+.inline .name {
+  margin-right: 0.35em;
 }
