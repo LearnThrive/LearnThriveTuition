@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BodyClass } from "@/components/BodyClass";
-import { ScrollReveal } from "@/components/ScrollReveal";
+import { Reveal } from "@/components/motion/primitives/Reveal";
+import { PointerDepth } from "@/components/motion/primitives/PointerDepth";
+import { MaskedText } from "@/components/motion/primitives/MaskedText";
+import { SectionHandoff } from "@/components/motion/primitives/SectionHandoff";
 import { createMetadata } from "@/lib/metadata";
-import { siteConfig } from "@/lib/site";
+import { enquiryGuidanceItems, siteConfig } from "@/lib/site";
 import styles from "./contact.module.css";
 
 export const metadata: Metadata = createMetadata({
@@ -12,13 +15,6 @@ export const metadata: Metadata = createMetadata({
     "Contact LearnThrive Tuition by email or phone, or begin a free consultation enquiry for personalised online tuition.",
   path: "/contact",
 });
-
-const guidanceItems = [
-  "The student’s current year group",
-  "The subject or subjects they need help with",
-  "Any current challenges or near-term goals",
-  "Your preferred way to be contacted",
-];
 
 export default function ContactPage() {
   return (
@@ -45,67 +41,82 @@ export default function ContactPage() {
         </div>
       </section>
 
+      <SectionHandoff from="navy" to="cream" />
+
       {/* ── Contact Cards ─────────────────────────────── */}
       <section className={styles.cardsSection}>
         <div className={styles.cardsGrid}>
-          <ScrollReveal>
-            <article className={`${styles.card} ${styles.cardWhite}`}>
-              <span className={styles.cardLabel}>Email</span>
-              <h2>Write to LearnThrive</h2>
-              <a
-                className={styles.cardLink}
-                href={`mailto:${siteConfig.email}`}
-              >
-                {siteConfig.email}
-              </a>
-              <p>
-                Useful for sharing the student&apos;s year group, subject and a
-                brief outline of the support required.
-              </p>
-            </article>
-          </ScrollReveal>
-          <ScrollReveal delay={110}>
-            <article className={`${styles.card} ${styles.cardNavy}`}>
-              <span className={styles.cardLabel}>Phone</span>
-              <h2>Call LearnThrive</h2>
-              <div className={styles.phoneList}>
-                {siteConfig.phoneContacts.map((contact) => (
-                  <div key={contact.phoneHref} className={styles.phoneItem}>
-                    <span className={styles.phoneName}>{contact.name}</span>
-                    <a
-                      className={styles.phoneNumber}
-                      href={`tel:${contact.phoneHref}`}
-                    >
-                      {contact.phoneDisplay}
-                    </a>
-                  </div>
-                ))}
-              </div>
-              <p>
-                Use either published number to discuss an initial enquiry
-                directly.
-              </p>
-            </article>
-          </ScrollReveal>
+          {/* Both cards are on the first screen at desktop widths and hold the page's largest text
+              paint; revealing them delayed LCP to ~880 ms in the profile, so they are static. */}
+          <Reveal variant="static">
+            <PointerDepth>
+              <article className={`${styles.card} ${styles.cardWhite}`}>
+                <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-13Z" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="m5 6 7 6 7-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className={styles.cardLabel}>Email</span>
+                <h2>Write to LearnThrive</h2>
+                <a
+                  className={styles.cardLink}
+                  href={`mailto:${siteConfig.email}`}
+                >
+                  {siteConfig.email}
+                </a>
+                <p>
+                  Useful for sharing the student&apos;s year group, subject and a
+                  brief outline of the support required.
+                </p>
+              </article>
+            </PointerDepth>
+          </Reveal>
+          <Reveal variant="static">
+            <PointerDepth>
+              <article className={`${styles.card} ${styles.cardNavy}`}>
+                <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6.6 10.5c1.3 2.6 3.4 4.7 6 6l2-2a1.5 1.5 0 0 1 1.5-.4c1.1.35 2.3.55 3.5.55a1.4 1.4 0 0 1 1.4 1.4V19.5a1.4 1.4 0 0 1-1.4 1.4C10.8 20.9 3.1 13.2 3.1 4.4A1.4 1.4 0 0 1 4.5 3H8c.77 0 1.4.63 1.4 1.4 0 1.2.2 2.4.55 3.5.13.5.02 1.05-.35 1.45l-2 2Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className={styles.cardLabel}>Phone</span>
+                <h2>Call LearnThrive</h2>
+                <div className={styles.phoneList}>
+                  {siteConfig.phoneContacts.map((contact) => (
+                    <div key={contact.phoneHref} className={styles.phoneItem}>
+                      <span className={styles.phoneName}>{contact.name}</span>
+                      <a
+                        className={styles.phoneNumber}
+                        href={`tel:${contact.phoneHref}`}
+                      >
+                        {contact.phoneDisplay}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+                <p>
+                  Use either published number to discuss an initial enquiry
+                  directly.
+                </p>
+              </article>
+            </PointerDepth>
+          </Reveal>
         </div>
       </section>
 
       {/* ── Guidance ──────────────────────────────────── */}
       <section className={styles.guidanceSection}>
         <div className={styles.guidanceInner}>
-          <ScrollReveal>
+          <Reveal variant="editorial">
             <div>
               <p className={`${styles.eyebrow} ${styles.eyebrowDark}`}>
                 Helpful information
               </p>
               <h2 className={styles.guidanceTitle}>
-                What to include in an enquiry
+                <MaskedText>What to include in an enquiry</MaskedText>
               </h2>
             </div>
-          </ScrollReveal>
-          <ScrollReveal delay={120}>
+          </Reveal>
+          <Reveal variant="soft" delay={0.12}>
             <ul className={styles.checkList}>
-              {guidanceItems.map((item) => (
+              {enquiryGuidanceItems.map((item) => (
                 <li key={item} className={styles.checkItem}>
                   <svg
                     className={styles.checkIcon}
@@ -125,13 +136,13 @@ export default function ContactPage() {
                 </li>
               ))}
             </ul>
-          </ScrollReveal>
+          </Reveal>
         </div>
       </section>
 
       {/* ── CTA ───────────────────────────────────────── */}
       <section className={styles.ctaSection}>
-        <ScrollReveal>
+        <Reveal variant="soft">
           <h2>Prefer a guided enquiry?</h2>
           <p>
             Use the consultation form to share the key details in one place
@@ -140,7 +151,7 @@ export default function ContactPage() {
           <Link href="/book" className={styles.btnPrimary}>
             Book a free consultation &rarr;
           </Link>
-        </ScrollReveal>
+        </Reveal>
       </section>
     </div>
   );
