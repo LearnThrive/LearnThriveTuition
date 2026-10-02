@@ -131,7 +131,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  animation: lt-rise 0.8s both 0.42s;
+  /* Functional navigation, and on a phone the largest thing on the first screen: a shorter stagger
+     than the heading's so it is available (and painted) sooner. */
+  animation: lt-rise 0.6s both 0.18s;
 }
 
 .jumpLabel {
