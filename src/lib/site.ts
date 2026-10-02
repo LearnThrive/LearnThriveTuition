@@ -23,6 +23,10 @@ export const siteConfig = {
     linkedin: "https://www.linkedin.com/company/learnthrive-tuition/",
   },
   tutorLoginUrl: "https://secure.tutorcruncher.com/learnthrive-tuition/login/",
+  legalName: "LearnThrive Tuition Ltd",
+  companyNumber: "16680738",
+  registeredIn: "England and Wales",
+  correspondenceAddress: "71-75 Shelton Street, Covent Garden, London, United Kingdom, WC2H 9JQ",
 } as const;
 
 export const navigation = [
@@ -714,4 +718,12 @@ export const subjectOptions = [
   "11+ Preparation",
   "More than one subject",
   "Not sure yet",
+] as const;
+
+/** Shared so /contact and /book show the same guidance rather than two copies that could drift. */
+export const enquiryGuidanceItems = [
+  "The student’s current year group",
+  "The subject or subjects they need help with",
+  "Any current challenges or near-term goals",
+  "Your preferred way to be contacted",
 ] as const;

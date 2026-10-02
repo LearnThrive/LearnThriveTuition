@@ -20,9 +20,16 @@
   --colour-focus: #813900;
   --colour-focus-outer: #fff2b8;
 
-  --font-sans: "Aptos", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
-    BlinkMacSystemFont, sans-serif;
-  --font-heading: "Aptos Display", "Segoe UI Variable Display", "Segoe UI",
+  /* Both variables resolve through next/font (loaded sitewide on <html> in layout.tsx), with the
+     same system-font fallback chain either way. "Aptos"/"Aptos Display" (Microsoft 365's default)
+     used to be first in this chain but nothing actually loads that font — it silently fell back
+     to Segoe UI/system-ui on any machine without Office installed, on every route except the
+     homepage/subjects pages, which already override to this same Bricolage/Public Sans pairing
+     via home.module.css's .page. Using it here instead makes the rest of the site match what
+     those two pages already do, at no extra font-loading cost since the variables are global. */
+  --font-sans: var(--font-public-sans), "Segoe UI Variable", "Segoe UI", system-ui,
+    -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: var(--font-bricolage), "Segoe UI Variable Display", "Segoe UI",
     system-ui, sans-serif;
 
   --container: 75rem;
@@ -32,11 +39,42 @@
   --shadow-sm: 0 8px 24px rgb(9 29 49 / 7%);
   --shadow-md: 0 20px 55px rgb(9 29 49 / 13%);
   --shadow-interactive: 0 16px 34px rgb(9 29 49 / 11%);
+
+  /* ── Motion system (plan8) ───────────────────────────────────────────────────────────────
+     One shared set of durations and easing curves for the whole product — marketing, app and
+     classroom alike — so "how long should this take" and "what curve" stop being re-decided
+     per component. Four durations, named by what they're for rather than a raw number, plus
+     three easing curves for three different *kinds* of motion:
+
+     --ease-snappy  a confident deceleration with no overshoot — presses, hovers, anything that
+                    confirms "you did that". This is the curve this codebase already had
+                    (--ease-out / --app-ease); kept as the default rather than replaced.
+     --ease-smooth  symmetric ease-in-out — crossfades and things that move *between* two states
+                    with no obvious start/end emphasis (tab underline, skeleton→content).
+     --ease-gentle  a slower, more settled ease-out — larger movements that should feel weighty
+                    rather than snappy (dialogs, drawers, page transitions).
+
+     --duration-fast/--duration-medium already had real values in use across dozens of rules;
+     kept as-is rather than churned, and folded into the instant/fast/standard/slow scale below
+     as aliases so existing and new code share one source of truth. */
+  --duration-instant: 100ms;
   --duration-fast: 160ms;
   --duration-medium: 220ms;
+  --duration-standard: var(--duration-medium);
+  --duration-slow: 380ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snappy: var(--ease-out);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-gentle: cubic-bezier(0.16, 1, 0.3, 1);
+
   --section-space: clamp(4.5rem, 8vw, 7.5rem);
 }
+
+/* Every transition/animation in the product is capped to near-zero duration under reduced
+   motion (see the blanket `*, *::before, *::after` rule further down this file) — that rule is
+   the actual enforcement mechanism and needs no per-component opt-in. The handful of JS-driven
+   effects that aren't expressed as a CSS transition (a delayed unmount, a counted-up number)
+   check `prefers-reduced-motion` directly in code instead; see src/lib/motion/. */
 
 *,
 *::before,
@@ -380,15 +418,31 @@ ol {
   text-decoration: underline;
 }
 
-/* Header */
+/* Header. plan11.md task 13: "airy at top -> compact/solid when scrolled" — the audit's own M-12
+   finding on this block (docs/MOTION_PERFORMANCE_AUDIT.md) is that a sticky element with a
+   `backdrop-filter` must re-sample and re-blur whatever scrolls beneath it every frame, and at 96%
+   opacity the blur bought almost nothing visually — removed rather than kept "just in case". The
+   at-rest state below is a lighter, still-legible translucent background with no blur and no
+   shadow; .site-header--scrolled (SiteHeader.tsx, toggled from a Motion scroll listener, see that
+   file's comment) is the fully opaque, bordered, shadowed "solid" state the audit prescribed. Per-
+   page overrides (:global(body.is-* .site-header), five pages) only ever set the at-rest
+   background/border colour, so they keep working for the airy state; !important on the scrolled
+   rule is what makes the compact state look the same regardless of which page's tint it started
+   from, which is the whole point of a "now you've scrolled" state. */
 .site-header {
   position: sticky;
   z-index: 100;
   top: 0;
-  border-bottom: 1px solid rgb(14 42 71 / 10%);
-  background: rgb(255 255 255 / 96%);
-  box-shadow: 0 2px 18px rgb(9 29 49 / 4%);
-  backdrop-filter: blur(16px);
+  border-bottom: 1px solid transparent;
+  background: rgb(255 255 255 / 72%);
+  box-shadow: none;
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.site-header.site-header--scrolled {
+  border-bottom: 1px solid rgb(14 42 71 / 10%) !important;
+  background: rgb(255 255 255 / 100%) !important;
+  box-shadow: 0 2px 18px rgb(9 29 49 / 4%) !important;
 }
 
 .site-header__inner {
@@ -397,6 +451,11 @@ ol {
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
+  transition: min-height 0.25s ease;
+}
+
+.site-header--scrolled .site-header__inner {
+  min-height: 4.25rem;
 }
 
 .brand {
@@ -539,6 +598,27 @@ ol {
   transform: translateY(-6px) rotate(-45deg);
 }
 
+@keyframes lt-menu-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* plan11.md task 13's mobile menu "backdrop -> panel -> links -> CTA": this is the backdrop step.
+   0 opacity and non-interactive outside the mobile breakpoint (below, in that media query) is a
+   belt-and-braces guard — .navigation-shell's own open/close toggle only reaches the user via
+   .menu-toggle, itself display:none above that breakpoint, so this should never actually be
+   triggered on desktop, but a resize while open should not leave a stray full-viewport click-
+   catcher behind either. */
+.navigation-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgb(9 29 49 / 0%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
 /* Home hero */
 .home-hero {
   position: relative;
@@ -611,83 +691,6 @@ ol {
 .home-hero__visual {
   position: relative;
   padding-bottom: 2.5rem;
-}
-
-.hero-image-frame {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 1.02;
-  border: 0.55rem solid var(--colour-white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-}
-
-.hero-image-frame::after {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgb(9 29 49 / 38%), transparent 42%);
-  content: "";
-  pointer-events: none;
-}
-
-.hero-image-frame > img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 55% center;
-}
-
-.hero-image-frame__label {
-  position: absolute;
-  z-index: 1;
-  bottom: 1rem;
-  left: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.62rem 0.78rem;
-  border: 1px solid rgb(255 255 255 / 50%);
-  border-radius: var(--radius-sm);
-  background: rgb(255 255 255 / 92%);
-  color: var(--colour-navy-950);
-  font-size: 0.82rem;
-  font-weight: 750;
-  backdrop-filter: blur(10px);
-}
-
-.live-dot {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: var(--colour-green-600);
-  box-shadow: 0 0 0 4px rgb(22 138 91 / 15%);
-}
-
-.hero-subject-note {
-  position: absolute;
-  right: -1.4rem;
-  bottom: 0;
-  display: grid;
-  min-width: 16rem;
-  gap: 0.25rem;
-  padding: 1.1rem 1.25rem;
-  border-left: 4px solid var(--colour-green-500);
-  border-radius: var(--radius-sm);
-  background: var(--colour-navy-900);
-  box-shadow: var(--shadow-sm);
-  color: var(--colour-white);
-}
-
-.hero-subject-note span {
-  color: #b9ccd7;
-  font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
-.hero-subject-note strong {
-  font-size: 0.92rem;
 }
 
 /* Trust strip */
@@ -1317,6 +1320,14 @@ ol {
   color: var(--colour-white);
 }
 
+/* plan12.md task 7: the per-subject hero motif, full-bleed behind the hero copy (CinematicBackdrop
+   already positions its own wrapper absolute/inset:0 — this just fills that wrapper). */
+.subject-hero-motif {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .page-hero::after {
   position: absolute;
   right: -8rem;
@@ -1329,6 +1340,19 @@ ol {
     0 0 0 4rem rgb(255 255 255 / 2%),
     0 0 0 8rem rgb(255 255 255 / 2%);
   content: "";
+}
+
+/* plan12.md task 13: "very light path/background atmosphere" for legal/support pages — the same
+   faint dot-grid language the other cinematic marketing pages use (About/Contact/FAQ), passed
+   through PageHero's `backdrop` slot (plan12.md task 7) so it's tier-gated and suspended off-screen
+   like every other CinematicBackdrop usage, rather than a second always-on decorative layer. A
+   notch fainter again than those pages' own dots: these are pages people read closely, not browse. */
+.legal-hero-atmosphere {
+  position: absolute;
+  inset: 0 45% 0 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
 }
 
 .page-hero__inner {
@@ -1361,6 +1385,39 @@ ol {
   margin-top: 1.4rem;
   color: #c8d7df;
   font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+}
+
+/* plan11.md task 12's "subtle page-title reveal", scoped to legal pages only (PageHero.tsx's
+   className prop) rather than every page that renders the shared PageHero — a plain CSS @keyframes
+   on first paint, the same "lt-rise" shape the marketing pages' own hero copy already uses, not a
+   whileInView reveal: this content is always first-screen, and gating it behind JavaScript would
+   risk the exact LCP regression already documented elsewhere in this codebase (Reveal.tsx's own
+   comment, marketing-motion.spec.ts's "first block after the hero" guard). */
+@keyframes lt-page-hero-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+
+.page-hero--legal .eyebrow {
+  animation: lt-page-hero-rise 0.6s both;
+}
+
+.page-hero--legal h1 {
+  animation: lt-page-hero-rise 0.7s both 0.08s;
+}
+
+.page-hero--legal .page-hero__intro {
+  animation: lt-page-hero-rise 0.7s both 0.18s;
+}
+
+@media print {
+  .page-hero--legal .eyebrow,
+  .page-hero--legal h1,
+  .page-hero--legal .page-hero__intro {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 .page-hero__actions {
@@ -1802,10 +1859,18 @@ ol {
 }
 
 .subject-pathway-grid {
+  position: relative;
   list-style: none;
 }
 
+/* plan12.md task 15's anti-generic audit: this shared border+top-accent+radius recipe used to also
+   carry --shadow-sm, making these cards read as a straight repeat of .feature-card just above them
+   (the support grid) rather than the coverage section's own waypoint-along-a-path idea (the drawn
+   PathTrack/Milestone this section already renders through maths/11-plus/science). No shadow keeps
+   these flatter than the lifted, gradient-backed support cards — a deliberate, cheap differentiator
+   rather than a new component, applied once here so it benefits every subject landing page. */
 .subject-pathway-card {
+  position: relative;
   min-width: 0;
   min-height: 17rem;
   padding: clamp(1.35rem, 2.5vw, 1.8rem);
@@ -1813,7 +1878,45 @@ ol {
   border-top: 3px solid var(--subject-accent);
   border-radius: var(--radius-md);
   background: var(--colour-white);
-  box-shadow: var(--shadow-sm);
+}
+
+/* plan11.md task 10's per-subject "world" motifs (SubjectWorld.tsx): a drawn path + milestone dots
+   for maths/11-plus, a small connected-node accent for science. Absolutely positioned so the SVG
+   (subject-world-track) and the dots (subject-world-milestone) don't themselves become grid items
+   of .subject-pathway-grid's 4-column layout — an absolutely positioned grid child is taken out of
+   grid placement entirely, which is what keeps the card count at a clean four columns. */
+.subject-world-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 2.7rem;
+  height: 2px;
+  width: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.subject-world-milestone {
+  position: absolute;
+  left: 50%;
+  top: 2.7rem;
+  width: 10px;
+  height: 10px;
+  /* Centres the dot without touching `transform` — Motion sets `scale` via an inline
+     `transform` on this same element, and a CSS transform on the same property would be
+     overridden by it (the exact collision HeroScene.tsx's fix documents at length). */
+  margin-left: -5px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--subject-accent);
+  pointer-events: none;
+}
+
+.subject-world-nodes {
+  display: block;
+  width: 96px;
+  height: 48px;
+  margin: 0 auto clamp(1.5rem, 3vw, 2.5rem);
 }
 
 .subject-pathway-card > span {
@@ -1878,7 +1981,27 @@ ol {
 }
 
 /* Booking form */
+.booking-section {
+  /* plan12.md task 12: "subtle atmospheric background" — a CinematicBackdrop glow sits behind the
+     whole layout, clipped to this section rather than bleeding into the hero/footer above/below. */
+  position: relative;
+  overflow: clip;
+}
+
+.booking-atmosphere {
+  position: absolute;
+  left: 18%;
+  top: -6%;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(7, 95, 82, 0.1) calc(100% - 30px), rgba(7, 95, 82, 0) 100%);
+  pointer-events: none;
+}
+
 .booking-layout {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.55fr);
   align-items: start;
@@ -1886,7 +2009,35 @@ ol {
 }
 
 .booking-form-shell {
+  position: relative;
   min-width: 0;
+}
+
+/* plan12.md task 12: "strong visual framing" for the primary form — restrained corner brackets
+   around the form shell (the sidebar already has its own frame: a navy panel with a green top
+   border) rather than a second, heavier box duplicating .enquiry-form's own border and shadow. */
+.booking-form-frame-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--colour-green-700);
+  pointer-events: none;
+}
+
+.booking-form-frame-corner--tl {
+  top: -12px;
+  left: -12px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 6px;
+}
+
+.booking-form-frame-corner--br {
+  bottom: -12px;
+  right: -12px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 6px;
 }
 
 .booking-form-heading {
@@ -1912,6 +2063,71 @@ ol {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 75%),
     0 16px 38px rgb(9 29 49 / 7%);
+}
+
+/* plan11.md task 11's "animated progress/section indicator" and "visually group form into clear
+   stages" — EnquiryForm.tsx. Two derived, read-only stages over the same fields; nothing here
+   changes what gets validated or submitted. */
+.enquiry-form-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--colour-muted);
+}
+
+.enquiry-form-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.enquiry-form-progress-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--colour-muted);
+  background: transparent;
+  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+.enquiry-form-progress-dot.is-complete {
+  border-color: var(--colour-green-700);
+  background: var(--colour-green-700);
+}
+
+.enquiry-form-progress-line {
+  flex: 1;
+  min-width: 1.5rem;
+  height: 2px;
+  overflow: hidden;
+  background: var(--colour-border);
+}
+
+.enquiry-form-progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--colour-green-700);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+
+.form-stage + .form-stage {
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px dashed var(--colour-border);
+}
+
+.form-stage-heading {
+  margin: 0 0 0.9rem;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--colour-ink);
 }
 
 .form-grid {
@@ -2129,6 +2345,32 @@ ol {
   margin-top: 1rem;
 }
 
+/* EnquiryForm.tsx has used the class name "form-message--success" since before this pass, but no
+   rule matched it — the success panel rendered with only the plain .form-message base style, none
+   of the green treatment .form-message--error's red counterpart gets. Same colours as the (unused
+   by anything else) .form-message--prepared above, given the matching name. */
+.form-message--success {
+  border: 1px solid #a9d5bf;
+  background: #edf8f1;
+  color: var(--colour-ink);
+}
+
+.form-message--success .button {
+  width: fit-content;
+  margin-top: 1rem;
+}
+
+.form-success-check {
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-bottom: 0.75rem;
+  color: var(--colour-green-700);
+}
+
+/* plan12.md task 15's anti-generic audit: this page already has two other bordered surfaces (the
+   hero's .contact-mini-card and the form's own .enquiry-form, framed further still by Task 12's
+   corner brackets) — dropping this sidebar's own lift-shadow keeps its navy panel + green top
+   accent (a real echo of the hero above it) without making it read as a third competing card. */
 .booking-sidebar {
   position: sticky;
   top: 7rem;
@@ -2136,7 +2378,6 @@ ol {
   border-top: 4px solid var(--colour-green-600);
   border-radius: var(--radius-lg);
   background: var(--colour-navy-900);
-  box-shadow: 0 18px 42px rgb(9 29 49 / 15%);
   color: #d5e2e8;
 }
 
@@ -2179,6 +2420,49 @@ ol {
   margin-top: 0.2rem;
   color: #b8cbd4;
   font-size: 0.86rem;
+}
+
+/* plan13.md task 5: the same "what to include" guidance /contact shows, surfaced on /book too —
+   reuses .booking-sidebar's existing green accent (matches li > span above) rather than the
+   light-background .check-list class, which isn't legible against this sidebar's navy fill. */
+.booking-checklist {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgb(255 255 255 / 13%);
+}
+
+.booking-checklist strong {
+  color: var(--colour-white);
+}
+
+.booking-checklist ul {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.7rem;
+  list-style: none;
+}
+
+.booking-checklist li {
+  /* .booking-sidebar li above (the numbered "What happens next?" steps) sets display: grid with
+     a 2rem/1fr column split, plus its own padding-block/border-bottom, for its own icon+text
+     children — a bare li selector, so it also matches these plain-text items. Every property it
+     sets is reset here explicitly rather than left to depend on that unrelated rule's leftovers. */
+  display: block;
+  position: relative;
+  padding-block: 0.5rem;
+  padding-left: 1.5rem;
+  border-bottom: none;
+  color: #b8cbd4;
+  font-size: 0.86rem;
+}
+
+.booking-checklist li::before {
+  position: absolute;
+  top: 0.05rem;
+  left: 0;
+  color: #91d5b0;
+  content: "✓";
+  font-weight: 900;
 }
 
 .honesty-note {
@@ -2404,18 +2688,39 @@ ol {
   content: "";
 }
 
+/* plan11.md task 11's "icon morph": was an instant display:none toggle — the vertical bar of the
+   "+" simply vanished, rather than the "+" turning into a "-". Rotating it flush with the
+   horizontal bar (transform, so it's compositor-only) instead is the same shape change, animated. */
 .faq-item__marker::after {
   transform: rotate(90deg);
+  transition: transform 0.25s ease;
 }
 
 .faq-item[open] .faq-item__marker::after {
-  display: none;
+  transform: rotate(0deg);
 }
 
 .faq-item__answer {
   max-width: 66ch;
   padding: 0 2.75rem 1.5rem 0.25rem;
   overflow-wrap: anywhere;
+  /* plan11.md task 11's "smooth accordion content reveal". Only the opening transitions — native
+     <details> sets its non-summary content to display:none the instant it closes, which cuts off
+     any transition already in flight, so animating the close as well needs either the JS FaqHashOpener
+     does not currently do (out of scope: the plan asks to *preserve*, not extend, its hash-deep-link
+     behaviour) or the newer transition-behavior: allow-discrete + @starting-style pairing applied to
+     `display` itself, which is a bigger and less broadly-supported change for one direction of an
+     already-instant interaction. Opacity/translate are continuously animatable, so @starting-style
+     alone (no allow-discrete needed) is enough to animate the appearance; unsupported browsers simply
+     show the content immediately, exactly like today — never a regression. */
+  transition: opacity 0.3s ease, translate 0.3s ease;
+}
+
+@starting-style {
+  .faq-item[open] .faq-item__answer {
+    opacity: 0;
+    translate: 0 -6px;
+  }
 }
 
 .faq-item__answer .text-link {
@@ -2470,6 +2775,17 @@ ol {
   padding: 1.5rem;
   border-radius: var(--radius-sm);
   background: var(--colour-cream);
+}
+
+/* LegalContentsNav (plan11.md task 12): the currently-in-view section's link, tracked via
+   IntersectionObserver rather than a scroll listener — see that file's own comment. A left border
+   plus colour/weight, not a moving element, so this never fights the sticky sidebar's own layout. */
+.legal-contents a[aria-current="true"] {
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--colour-green-700);
+  color: var(--colour-green-800);
+  font-weight: 700;
+  transition: border-color var(--duration-fast) ease, padding-left var(--duration-fast) ease;
 }
 
 .legal-contents h2 {
@@ -2533,12 +2849,90 @@ ol {
   overflow-wrap: anywhere;
 }
 
+/* SafeguardingTrustPath.tsx (plan11.md task 11) — the same "drawn vertical line connecting
+   sequential items" shape as home.module.css's .howStepsPathWrap/.howStepsPathTrack, sized for a
+   plain prose column instead of a dark hero section. top+bottom (no explicit height) on the track
+   lets it stretch to match however tall the four stages render. */
+.safeguarding-trust-path {
+  position: relative;
+  margin: 1.5rem 0;
+}
+
+.safeguarding-trust-path-track {
+  position: absolute;
+  left: 17px;
+  top: 12px;
+  bottom: 22px;
+  width: 2px;
+}
+
+.safeguarding-trust-path-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.safeguarding-trust-path-list {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.safeguarding-trust-path-item {
+  position: relative;
+  padding: 0.6rem 0 1.25rem 44px;
+  font-weight: 600;
+  color: var(--colour-ink);
+}
+
+.safeguarding-trust-path-item::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 1rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--colour-green-600);
+  transition: background 0.3s ease;
+}
+
+/* plan12.md task 5: a stage the scroll position hasn't reached yet, matching home.module.css's
+   .howStepNumberPending — the same recurring visual device, the same treatment. Only the
+   decorative dot's colour changes; the stage's own text stays at full contrast throughout (an
+   opacity reduction here previously failed axe's color-contrast check — --colour-ink on this
+   background has no margin to spend). */
+.safeguarding-trust-path-item--pending::before {
+  background: var(--colour-border);
+}
+
+.safeguarding-trust-path-item:last-child {
+  padding-bottom: 0;
+}
+
 .legal-contact-box {
   margin-top: 3rem;
   padding: clamp(1.25rem, 3vw, 2rem);
   border-left: 4px solid var(--colour-green-700);
   border-radius: var(--radius-sm);
   background: var(--colour-mint-100);
+}
+
+/* plan12.md task 9: the one section on /safeguarding a reader might need in a hurry — same
+   established box shape as .legal-contact-box (consistency over inventing a second pattern), a
+   calmer navy border rather than red so it reads as "important" without reading as "alarm". */
+.safeguarding-urgent-box {
+  margin-top: 1.25rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-left: 4px solid var(--colour-navy-800);
+  border-radius: var(--radius-sm);
+  background: var(--colour-mint-100);
+}
+
+.safeguarding-urgent-box ul {
+  margin-top: 0;
 }
 
 .legal-table-wrap table {
@@ -2619,9 +3013,33 @@ ol {
 
 /* Footer */
 .site-footer {
+  position: relative;
+  overflow: hidden;
   padding-top: clamp(4rem, 7vw, 6rem);
   background: var(--colour-navy-950);
   color: #b9cbd5;
+}
+
+/* plan12.md task 14: the footer's own dot-grid + soft glow — see SiteFooter.tsx's comment. Matches
+   the proportions of the marketing pages' heroDots/heroGlow pair (About/Contact/FAQ) without
+   sharing their CSS module, since this component is used site-wide, not scoped to one page. */
+.footer-atmosphere {
+  position: absolute;
+  inset: 0 45% 0 0;
+  background-image: radial-gradient(rgb(255 255 255 / 8%) 1px, transparent 1px);
+  background-size: 22px 22px;
+  pointer-events: none;
+}
+
+.footer-atmosphere::after {
+  content: "";
+  position: absolute;
+  left: -6rem;
+  top: -8rem;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(7 95 82 / 16%) calc(100% - 30px), rgb(7 95 82 / 0%) 100%);
 }
 
 .footer-grid {
@@ -2717,6 +3135,15 @@ ol {
 .footer-bottom a {
   color: #b9cbd5;
   text-decoration: none;
+}
+
+.footer-registration {
+  margin: 0.9rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  color: #7a8f9c;
+  font-size: 0.72rem;
+  line-height: 1.6;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2844,6 +3271,11 @@ ol {
 
   .navigation-shell {
     position: absolute;
+    /* Above .navigation-backdrop's z-index: 90 — without this, the panel (an absolutely
+       positioned sibling with no explicit z-index of its own, so it stacked at the auto/0 level)
+       sat *underneath* the backdrop, which then intercepted every click meant for its own links —
+       a real bug a Playwright actionability failure caught, not a hypothetical one. */
+    z-index: 95;
     top: 100%;
     right: 0;
     left: 0;
@@ -2868,6 +3300,26 @@ ol {
     pointer-events: auto;
     transform: translateY(0);
     visibility: visible;
+  }
+
+  .navigation-backdrop--open {
+    opacity: 1;
+    background: rgb(9 29 49 / 45%);
+    pointer-events: auto;
+  }
+
+  /* "panel -> links -> CTA": the panel is .navigation-shell's own opacity/transform transition
+     above (already existed); primary-navigation and header-cta each replay a short
+     rise-and-fade with an increasing delay so they read as arriving one after another rather than
+     all at once, capped at 0.01ms by the sitewide prefers-reduced-motion rule like every other
+     animation on this site. */
+  .navigation-shell--open .primary-navigation,
+  .navigation-shell--open .header-cta {
+    animation: lt-menu-rise 0.3s both;
+  }
+
+  .navigation-shell--open .header-cta {
+    animation-delay: 0.08s;
   }
 
   .primary-navigation {
@@ -2914,10 +3366,6 @@ ol {
   .home-hero__visual {
     width: min(100%, 38rem);
     margin-inline: auto;
-  }
-
-  .hero-image-frame {
-    aspect-ratio: 1.35;
   }
 
   .trust-strip__grid,
@@ -3075,16 +3523,6 @@ ol {
     display: grid;
   }
 
-  .hero-image-frame {
-    aspect-ratio: 1.08;
-  }
-
-  .hero-subject-note {
-    right: 0.75rem;
-    left: 0.75rem;
-    min-width: 0;
-  }
-
   .trust-strip__grid,
   .feature-grid,
   .subject-grid,
@@ -3194,6 +3632,21 @@ ol {
     padding: 1rem;
   }
 
+  /* The two nowrap step labels + connecting line (task 11's stage indicator) don't fit a single
+     row once .enquiry-form's own padding and the enclosing card's padding are subtracted from a
+     360px viewport — stack the steps instead of shrinking text that would still overflow at
+     narrower widths or in a longer-word locale. The connecting line has no sensible vertical
+     equivalent, so it's dropped; each dot's is-complete state still carries the progress. */
+  .enquiry-form-progress {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .enquiry-form-progress-line {
+    display: none;
+  }
+
   .form-field--full {
     grid-column: auto;
   }
@@ -3237,14 +3690,6 @@ ol {
     height: 2.8rem;
   }
 
-  .hero-image-frame__label {
-    right: 0.65rem;
-    bottom: 0.65rem;
-    left: 0.65rem;
-    justify-content: center;
-    text-align: center;
-  }
-
   .contact-preference > div {
     display: grid;
     width: 100%;
@@ -3256,6 +3701,17 @@ ol {
     width: 100%;
   }
 
+}
+
+/* plan11.md task 14: React's <ViewTransition> ((public)/page.tsx, SubjectLandingPage.tsx) drives
+   the browser's native View Transitions API, whose ::view-transition-* pseudo-elements are NOT
+   matched by a plain `*` selector — the catch-all reduced-motion rule below never reaches them, so
+   they need their own rule. Exactly the CSS Next's own view-transitions guide gives for this. */
+::view-transition {
+  /* The transition's own overlay captures pointer events while it plays, which would otherwise
+     make whatever the visitor clicks next briefly unresponsive — the same actionability failure
+     class docs/DESIGN_SYSTEM.md's reverted page-fade caused, so this is not optional. */
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3270,6 +3726,13 @@ ol {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 
   .button::before {
