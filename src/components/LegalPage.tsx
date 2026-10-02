@@ -80,8 +80,7 @@ export function LegalPage({
                   If you have a question about this page, email{" "}
                   <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a> or
                   call{" "}
-                  <PhoneContacts />
-                  .
+                  <PhoneContacts suffix="." />
                 </p>
               </div>
             </Reveal>

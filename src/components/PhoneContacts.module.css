@@ -34,3 +34,7 @@
 .link {
   overflow-wrap: anywhere;
 }
+
+.number {
+  overflow-wrap: anywhere;
+}

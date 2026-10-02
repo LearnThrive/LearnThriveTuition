@@ -129,7 +129,7 @@ export default function SafeguardingPage() {
                   making clear that your message concerns safeguarding; or
                 </li>
                 <li>
-                  call <PhoneContacts />.
+                  call <PhoneContacts suffix="." />
                 </li>
               </ul>
               <p>

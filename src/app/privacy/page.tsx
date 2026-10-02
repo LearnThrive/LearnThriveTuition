@@ -43,8 +43,7 @@ export default function PrivacyPage() {
               questions or requests, contact{" "}
               <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a> or
               call{" "}
-              <PhoneContacts />
-              .
+              <PhoneContacts suffix="." />
             </p>
           ),
         },
