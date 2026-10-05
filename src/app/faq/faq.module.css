@@ -1,8 +1,11 @@
 /* ── FAQ page redesign — scoped styles ────────────────── */
 
 .page {
-  --lt-navy: #143152;
-  --lt-navy-deep: #0E2540;
+  /* --lt-navy/--lt-navy-deep/--lt-text: see home.module.css's matching comments — the same
+     navy-drift and under-AA-contrast fixes applied there and on subjects.module.css, applied
+     here too rather than porting the predecessor project's copy of this token block verbatim. */
+  --lt-navy: var(--colour-navy-900);
+  --lt-navy-deep: var(--colour-navy-950);
   --lt-green: #075f52;
   --lt-green-dark: #075f52;
   --lt-green-light: #087363;
@@ -10,7 +13,7 @@
   --lt-cream-light: #FBF8F1;
   --lt-border: #E7DFCD;
   --lt-ink: #26333F;
-  --lt-text: #64727E;
+  --lt-text: #586573;
   --lt-font-heading: var(--font-bricolage), sans-serif;
   --lt-font-body: var(--font-public-sans), system-ui, sans-serif;
   --lt-font-mono: var(--font-ibm-plex-mono), monospace;
@@ -51,6 +54,11 @@
   pointer-events: none;
 }
 
+/* A soft green glow behind the hero. It used to be a flat disc put through `filter: blur(10px)` and
+   floated by an infinite animation: a filtered layer re-applying its blur on every frame, forever,
+   whether or not the hero was on screen (plan11.md task 5). The soft edge is now baked into a radial
+   gradient, so there is no filter to re-apply, and the layer is static — motion on it, where a page
+   wants any, comes from scrolling (a bounded parallax), never from a loop. */
 .heroGlow {
   position: absolute;
   right: -90px;
@@ -58,10 +66,8 @@
   width: 340px;
   height: 340px;
   border-radius: 50%;
-  background: rgba(7, 95, 82, 0.18);
-  filter: blur(10px);
+  background: radial-gradient(closest-side, rgba(7, 95, 82, 0.18) calc(100% - 22px), rgba(7, 95, 82, 0) 100%);
   pointer-events: none;
-  animation: lt-float 11s ease-in-out infinite;
 }
 
 .heroInner {
@@ -125,7 +131,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  animation: lt-rise 0.8s both 0.42s;
+  /* Functional navigation, and on a phone the largest thing on the first screen: a shorter stagger
+     than the heading's so it is available (and painted) sooner. */
+  animation: lt-rise 0.6s both 0.18s;
 }
 
 .jumpLabel {
@@ -160,6 +168,23 @@
   color: #fff;
 }
 
+/* plan12.md task 12: "active category/navigation polish" — the pill for whichever category
+   section is currently scrolled into view, tracked by FaqJumpNav.tsx's IntersectionObserver. */
+.jumpPillActive {
+  background: var(--lt-green);
+  border-color: var(--lt-green);
+  color: #fff;
+}
+
+.jumpPillActive:hover {
+  background: var(--lt-green-light);
+  border-color: var(--lt-green-light);
+}
+
+.jumpPillActive .jumpCount {
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .jumpCount {
   font-family: var(--lt-font-mono);
   font-weight: 500;
@@ -178,7 +203,7 @@
   align-items: start;
 }
 
-/* ScrollReveal wrapper must not break the grid */
+/* The Reveal wrapper around each category must not break the grid */
 .faqSections > * {
   min-width: 0;
 }
@@ -293,7 +318,22 @@
   transition: background 0.2s, border-color 0.2s;
 }
 
-.faqWrapper :global(.faq-item__marker::before),
+/* The two bars are written as separate, complete rules rather than one shared
+   `::before, ::after` rule: the bundler dropped the combined selector list, so the global marker
+   rules in globals.css won instead and left the two bars offset diagonally — an "=" that never
+   read as a "+". Each bar now carries every property it needs. */
+.faqWrapper :global(.faq-item__marker::before) {
+  content: "";
+  position: absolute;
+  background: var(--lt-green);
+  border-radius: 2px;
+  top: 50%;
+  left: 50%;
+  width: 11px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+}
+
 .faqWrapper :global(.faq-item__marker::after) {
   content: "";
   position: absolute;
@@ -301,17 +341,9 @@
   border-radius: 2px;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.faqWrapper :global(.faq-item__marker::before) {
-  width: 11px;
-  height: 2px;
-}
-
-.faqWrapper :global(.faq-item__marker::after) {
   width: 2px;
   height: 11px;
+  transform: translate(-50%, -50%);
   transition: transform 0.25s;
 }
 
@@ -320,7 +352,10 @@
   border-color: var(--lt-green);
 }
 
-.faqWrapper :global(.faq-item[open] .faq-item__marker::before),
+.faqWrapper :global(.faq-item[open] .faq-item__marker::before) {
+  background: #fff;
+}
+
 .faqWrapper :global(.faq-item[open] .faq-item__marker::after) {
   background: #fff;
 }
@@ -485,6 +520,7 @@
   color: var(--lt-text);
 }
 
+/* border-radius matches globals.css's .button — see home.module.css's .btnPrimary comment for why */
 .btnPrimary {
   display: inline-block;
   background: var(--lt-green);
@@ -492,7 +528,7 @@
   font-weight: 600;
   font-size: 16.5px;
   padding: 16px 30px;
-  border-radius: 999px;
+  border-radius: 0.62rem;
   text-decoration: none;
   box-shadow: 0 14px 30px -16px rgba(7, 95, 82, 0.9);
   transition: transform 0.2s, background 0.2s;
@@ -527,11 +563,6 @@
 @keyframes lt-rise {
   from { opacity: 0; transform: translateY(26px); }
   to { opacity: 1; transform: none; }
-}
-
-@keyframes lt-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-9px); }
 }
 
 @keyframes lt-mark {
@@ -594,10 +625,5 @@
   .page,
   .page :global(*) {
     animation: none !important;
-  }
-
-  :global(.rv) {
-    opacity: 1;
-    transform: none;
   }
 }

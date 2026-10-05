@@ -11,6 +11,15 @@
   align-items: flex-start;
 }
 
+/* Stacked contacts read as a consistent two-line block (name above number). Left to wrap, a short
+   name and its number sat on one line while a longer name pushed its number onto the next, so the
+   two contacts looked like different kinds of item. */
+.stacked .contact {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0.1rem;
+}
+
 .contact {
   display: inline-flex;
   min-width: 0;
@@ -24,4 +33,15 @@
 
 .link {
   overflow-wrap: anywhere;
+}
+
+/* Inline contacts flow as ordinary text rather than as flex rows, so a sentence's closing punctuation
+   (PhoneContacts' suffix) stays attached to the last number instead of wrapping onto a line of its
+   own. The stacked layout keeps its flex column. */
+.inline .contact {
+  display: block;
+}
+
+.inline .name {
+  margin-right: 0.35em;
 }

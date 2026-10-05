@@ -53,6 +53,11 @@
   pointer-events: none;
 }
 
+/* A soft green glow behind the hero. It used to be a flat disc put through `filter: blur(10px)` and
+   floated by an infinite animation: a filtered layer re-applying its blur on every frame, forever,
+   whether or not the hero was on screen (plan11.md task 5). The soft edge is now baked into a radial
+   gradient, so there is no filter to re-apply, and the layer is static — motion on it, where a page
+   wants any, comes from scrolling (a bounded parallax), never from a loop. */
 .heroGlow {
   position: absolute;
   right: -90px;
@@ -60,10 +65,8 @@
   width: 340px;
   height: 340px;
   border-radius: 50%;
-  background: rgba(7, 95, 82, 0.18);
-  filter: blur(10px);
+  background: radial-gradient(closest-side, rgba(7, 95, 82, 0.18) calc(100% - 22px), rgba(7, 95, 82, 0) 100%);
   pointer-events: none;
-  animation: lt-float 11s ease-in-out infinite;
 }
 
 .heroInner {
@@ -87,7 +90,9 @@
 }
 
 .heroTitle {
-  font-size: clamp(34px, 4.4vw, 52px) !important;
+  /* plan12.md task 11: a higher ceiling (was 52px) so the opening statement reads with real
+     editorial scale on capable screens; the floor is untouched, small screens unaffected. */
+  font-size: clamp(34px, 5vw, 64px) !important;
   line-height: 1 !important;
   letter-spacing: -0.03em !important;
   color: #fff !important;
@@ -125,9 +130,6 @@
   margin: 0;
   animation: lt-rise 0.8s both 0.3s;
 }
-
-/* ── Marquee ───────────────────────────────────────────── */
-/* Reuses the global .lt-marquee styles from home.module.css */
 
 /* ── Story Section ─────────────────────────────────────── */
 .storySection {
@@ -175,18 +177,47 @@
   margin-top: 30px;
 }
 
+/* plan12.md task 11: an asymmetric offset rather than two cards sitting in a perfectly even row —
+   a small, deliberate break from the grid, not a redesign of the cards themselves (still human,
+   still credible). Desktop only: a vertical offset on a narrow single column would just look like
+   uneven spacing rather than a considered layout choice. */
+@media (min-width: 901px) {
+  .foundersGrid > *:nth-child(2) {
+    margin-top: 36px;
+  }
+}
+
+/* The hover shadow lives on a pseudo-element that is drawn once and only fades in. Interpolating
+   `box-shadow` itself repaints the whole 44px-blurred region on every frame of the transition;
+   an opacity change on an already-painted layer is compositor work (plan11.md task 5). The colour
+   comes from --lift-shadow so each variant only has to name its shadow. */
 .founderCard {
+  position: relative;
   background: #fff;
   border: 1px solid var(--lt-border);
   border-top: 4px solid var(--lt-green);
   border-radius: 22px;
-  overflow: hidden;
-  transition: transform 0.3s, box-shadow 0.3s;
+  --lift-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.5);
+  transition: transform 0.3s;
+}
+
+.founderCard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--lift-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.founderCard:hover::after {
+  opacity: 1;
 }
 
 .founderCard:hover {
   transform: translateY(-7px);
-  box-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.5);
 }
 
 .founderCardInner {
@@ -205,6 +236,12 @@
   border-radius: 16px;
   border: 1px solid var(--lt-border);
   background: #EFE7D6;
+}
+
+/* The parallax wrapper (not the image) is the flex item in .founderCardInner. Left to shrink, it
+   squeezed the fixed-width portrait into a ~40px sliver and cropped the founder out of frame. */
+.founderPortraitWrap {
+  flex: none;
 }
 
 .founderPortraitTahasin {
@@ -281,6 +318,63 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* plan11.md task 11's "one desktop sticky value statement; ordinary vertical mobile flow": the
+   mission statement (eyebrow+title) stays pinned in view on the left while the "connected
+   experience" list on the right scrolls past it, then both return to plain stacked flow below
+   860px. The same shape as ProductStoryScene.module.css's .grid/.stickyCol (align-items: start is
+   what lets the sticky column stop stretching to match the taller one). */
+.missionGrid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 64px);
+  align-items: start;
+  max-width: 1080px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.missionSticky {
+  position: sticky;
+  top: 120px;
+}
+
+.missionValues {
+  display: grid;
+  gap: 16px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.missionValueItem {
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  font-family: var(--lt-font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+@media (max-width: 860px) {
+  .missionGrid {
+    display: block;
+    text-align: center;
+  }
+
+  .missionSticky {
+    position: static;
+    top: auto;
+  }
+
+  .missionValues {
+    text-align: left;
+  }
+}
+
 /* ── CTA Section ───────────────────────────────────────── */
 .ctaSection {
   background: var(--lt-cream-light);
@@ -328,11 +422,6 @@
   to { opacity: 1; transform: none; }
 }
 
-@keyframes lt-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-9px); }
-}
-
 @keyframes lt-mark {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
@@ -364,6 +453,10 @@
     flex-direction: column;
   }
 
+  .founderPortraitWrap {
+    width: 100%;
+  }
+
   .founderPortrait {
     width: 100%;
     aspect-ratio: 4 / 3;
@@ -385,10 +478,5 @@
   .page,
   .page :global(*) {
     animation: none !important;
-  }
-
-  :global(.rv) {
-    opacity: 1;
-    transform: none;
   }
 }

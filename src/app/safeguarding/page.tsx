@@ -1,5 +1,6 @@
 import { LegalPage } from "@/components/LegalPage";
 import { PhoneContacts } from "@/components/PhoneContacts";
+import { SafeguardingTrustPath } from "@/components/motion/scenes/SafeguardingTrustPath";
 import { createMetadata } from "@/lib/metadata";
 import { siteConfig } from "@/lib/site";
 
@@ -16,6 +17,7 @@ export default function SafeguardingPage() {
       eyebrow="Safeguarding"
       title="Safeguarding information"
       intro="Children’s welfare comes first. This page explains how to raise a concern and the safety considerations that matter around online tuition."
+      reviewedOn="28 September 2026"
       scope={
         <p>
           This information is for parents, guardians, students and anyone
@@ -41,6 +43,30 @@ export default function SafeguardingPage() {
                 exploitation, inappropriate behaviour or online harm. No adult
                 working with a child should inflict physical or psychological harm.
               </p>
+            </>
+          ),
+        },
+        {
+          id: "tutor-recruitment",
+          title: "Tutor recruitment and DBS checks",
+          content: (
+            <>
+              <p>
+                Every tutor goes through a thorough hiring process before
+                teaching a LearnThrive student, including a Disclosure and
+                Barring Service (DBS) check. No tutor begins teaching until
+                this process is complete.
+              </p>
+              <SafeguardingTrustPath />
+              <p>This matters because it helps LearnThrive to:</p>
+              <ul>
+                <li>make safe recruitment decisions;</li>
+                <li>
+                  protect children and adults at risk from harm, and minimise
+                  threats to staff, clients, assets, data and reputation; and
+                </li>
+                <li>meet its legal and regulatory obligations.</li>
+              </ul>
             </>
           ),
         },
@@ -103,7 +129,7 @@ export default function SafeguardingPage() {
                   making clear that your message concerns safeguarding; or
                 </li>
                 <li>
-                  call <PhoneContacts />.
+                  call <PhoneContacts suffix="." />
                 </li>
               </ul>
               <p>
@@ -125,6 +151,10 @@ export default function SafeguardingPage() {
           title: "Urgent and independent help",
           content: (
             <>
+              {/* plan12.md task 9: "present real reporting routes more clearly" — the one section
+                  on this page a reader might need in a hurry gets a visually distinct, calm
+                  (not alarming-red) treatment rather than reading identically to the others. */}
+              <div className="safeguarding-urgent-box">
               <ul>
                 <li>
                   If a child is in immediate danger, <strong>call 999</strong>.
@@ -148,6 +178,7 @@ export default function SafeguardingPage() {
                 needed. You do not need our permission to contact an independent
                 or statutory safeguarding service.
               </p>
+              </div>
             </>
           ),
         },

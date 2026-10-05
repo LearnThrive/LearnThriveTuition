@@ -1,8 +1,11 @@
 /* ── Contact page redesign — scoped styles ──────────────── */
 
 .page {
-  --lt-navy: #143152;
-  --lt-navy-deep: #0E2540;
+  /* --lt-navy/--lt-navy-deep/--lt-text: see home.module.css's matching comments — the same
+     navy-drift and under-AA-contrast fixes applied there, applied here too rather than porting
+     the predecessor project's copy of this token block verbatim. */
+  --lt-navy: var(--colour-navy-900);
+  --lt-navy-deep: var(--colour-navy-950);
   --lt-green: #075f52;
   --lt-green-dark: #075f52;
   --lt-green-light: #087363;
@@ -10,7 +13,7 @@
   --lt-cream-light: #FBF8F1;
   --lt-border: #E7DFCD;
   --lt-ink: #26333F;
-  --lt-text: #64727E;
+  --lt-text: #586573;
   --lt-font-heading: var(--font-bricolage), sans-serif;
   --lt-font-body: var(--font-public-sans), system-ui, sans-serif;
   --lt-font-mono: var(--font-ibm-plex-mono), monospace;
@@ -52,6 +55,11 @@
   pointer-events: none;
 }
 
+/* A soft green glow behind the hero. It used to be a flat disc put through `filter: blur(10px)` and
+   floated by an infinite animation: a filtered layer re-applying its blur on every frame, forever,
+   whether or not the hero was on screen (plan11.md task 5). The soft edge is now baked into a radial
+   gradient, so there is no filter to re-apply, and the layer is static — motion on it, where a page
+   wants any, comes from scrolling (a bounded parallax), never from a loop. */
 .heroGlow {
   position: absolute;
   right: -90px;
@@ -59,10 +67,8 @@
   width: 340px;
   height: 340px;
   border-radius: 50%;
-  background: rgba(7, 95, 82, 0.18);
-  filter: blur(10px);
+  background: radial-gradient(closest-side, rgba(7, 95, 82, 0.18) calc(100% - 22px), rgba(7, 95, 82, 0) 100%);
   pointer-events: none;
-  animation: lt-float 11s ease-in-out infinite;
 }
 
 .heroInner {
@@ -136,10 +142,31 @@
   gap: 20px;
 }
 
+/* The hover shadow lives on a pseudo-element that is drawn once and only fades in. Interpolating
+   `box-shadow` itself repaints the whole 44px-blurred region on every frame of the transition;
+   an opacity change on an already-painted layer is compositor work (plan11.md task 5). The colour
+   comes from --lift-shadow so each variant only has to name its shadow. */
 .card {
+  position: relative;
   border-radius: 22px;
   padding: 32px;
-  transition: transform 0.3s, box-shadow 0.3s;
+  --lift-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.5);
+  transition: transform 0.3s;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--lift-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.card:hover::after {
+  opacity: 1;
 }
 
 .card:hover {
@@ -149,23 +176,34 @@
 .cardWhite {
   background: #fff;
   border: 1px solid var(--lt-border);
-}
-
-.cardWhite:hover {
-  box-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.5);
+  --lift-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.5);
 }
 
 .cardNavy {
   background: var(--lt-navy);
   color: #fff;
-}
-
-.cardNavy:hover {
-  box-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.85);
+  --lift-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.85);
 }
 
 .cardNavy h2 {
   color: #fff !important;
+}
+
+/* plan12.md task 12: "contact methods become compositional elements rather than generic cards" —
+   a per-method glyph, so the two cards read by shape/icon before the label text, not just as two
+   identically-shaped rectangles distinguished only by colour. */
+.cardIcon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 18px;
+}
+
+.cardWhite .cardIcon {
+  color: var(--lt-green-dark);
+}
+
+.cardNavy .cardIcon {
+  color: #13c2a0;
 }
 
 .cardLabel {
@@ -182,7 +220,9 @@
 }
 
 .cardNavy .cardLabel {
-  color: var(--lt-green-light);
+  /* home.module.css's .levelRowDark .levelYears / .statValueGreen: --lt-green-light (#087363) only
+     clears ~2.5:1 on this navy background, under AA — the same brighter one-off fixes it here. */
+  color: #13c2a0;
 }
 
 .card h2 {
@@ -244,14 +284,15 @@
 .phoneNumber {
   font-size: 18px;
   font-weight: 600;
-  color: var(--lt-green-light);
+  /* Same fix as .cardNavy .cardLabel above: --lt-green-light fails AA on this navy card. */
+  color: #13c2a0;
   text-decoration: none;
   transition: opacity 0.2s;
 }
 
 .phoneNumber:hover {
   opacity: 0.8;
-  color: var(--lt-green-light);
+  color: #13c2a0;
 }
 
 /* ── Guidance Section ──────────────────────────────────── */
@@ -317,6 +358,7 @@
   color: var(--lt-text);
 }
 
+/* border-radius matches globals.css's .button — see home.module.css's .btnPrimary comment for why */
 .btnPrimary {
   display: inline-block;
   background: var(--lt-green);
@@ -324,7 +366,7 @@
   font-weight: 600;
   font-size: 16.5px;
   padding: 16px 30px;
-  border-radius: 999px;
+  border-radius: 0.62rem;
   text-decoration: none;
   box-shadow: 0 14px 30px -16px rgba(7, 95, 82, 0.9);
   transition: transform 0.2s, background 0.2s;
@@ -341,11 +383,6 @@
 @keyframes lt-rise {
   from { opacity: 0; transform: translateY(26px); }
   to { opacity: 1; transform: none; }
-}
-
-@keyframes lt-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-9px); }
 }
 
 @keyframes lt-mark {
@@ -386,10 +423,5 @@
   .page,
   .page :global(*) {
     animation: none !important;
-  }
-
-  :global(.rv) {
-    opacity: 1;
-    transform: none;
   }
 }

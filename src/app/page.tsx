@@ -2,10 +2,20 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { BodyClass } from "@/components/BodyClass";
-import { ScrollReveal } from "@/components/ScrollReveal";
+import { MaskedText } from "@/components/motion/primitives/MaskedText";
+import { PointerDepth } from "@/components/motion/primitives/PointerDepth";
+import { Reveal } from "@/components/motion/primitives/Reveal";
+import { SceneShell } from "@/components/motion/primitives/SceneShell";
+import { CinematicBackdrop } from "@/components/motion/primitives/CinematicBackdrop";
+import { SectionHandoff } from "@/components/motion/primitives/SectionHandoff";
 import { Marquee } from "@/components/Marquee";
 import { StatCounter } from "@/components/StatCounter";
+import { HeroScene } from "@/components/motion/scenes/HeroScene";
+import { LearningPathScene } from "@/components/motion/scenes/LearningPathScene";
+import { SafeguardingScene } from "@/components/motion/scenes/SafeguardingScene";
+import { SubjectIcon, SubjectMotif, SUBJECT_ACCENT, type SubjectKey } from "@/components/SubjectIcon";
 import { createMetadata } from "@/lib/metadata";
+import { siteConfig, testimonials } from "@/lib/site";
 import styles from "./home.module.css";
 
 export const metadata: Metadata = createMetadata({
@@ -31,9 +41,18 @@ const howSteps = [
   { title: "You see progress", text: "In confidence first, then in results.", last: true },
 ];
 
-const subjectCards = [
+const subjectCards: {
+  title: string;
+  subject: SubjectKey;
+  slug: string;
+  description: string;
+  image: string;
+  imageAlt: string;
+  range: string;
+}[] = [
   {
     title: "Maths",
+    subject: "maths",
     slug: "maths-tuition",
     description: "From number confidence at KS2 to calculus, statistics and mechanics at A-Level.",
     image: "/images/subject-maths.jpg",
@@ -42,6 +61,7 @@ const subjectCards = [
   },
   {
     title: "English",
+    subject: "english",
     slug: "english-tuition",
     description: "Reading, writing and analysis that build clear, confident communicators.",
     image: "/images/subject-english.jpg",
@@ -50,6 +70,7 @@ const subjectCards = [
   },
   {
     title: "Science",
+    subject: "science",
     slug: "science-tuition",
     description: "Biology, chemistry and physics — curious, hands-on and clearly explained.",
     image: "/images/subject-science.jpg",
@@ -58,6 +79,7 @@ const subjectCards = [
   },
   {
     title: "11+ Preparation",
+    subject: "eleven-plus",
     slug: "11-plus-tuition",
     description: "Maths, English and reasoning, with the exam technique that counts.",
     image: "/images/subject-elevenplus.jpg",
@@ -78,91 +100,79 @@ export default function HomePage() {
     <div className={styles.page}>
       <BodyClass className="is-homepage" />
       {/* ── Hero ──────────────────────────────────────── */}
-      <section className={styles.hero}>
-        <div className={styles.heroDots} aria-hidden="true" />
-        <div className={styles.heroGlow} aria-hidden="true" />
-        <div className={styles.heroGrid}>
-          <div className={styles.heroCopy}>
-            <div className={styles.heroChip}>
-              <span className={styles.heroChipDot} aria-hidden="true" />
-              Online &middot; one-to-one &middot; Y1 to A-Level
-            </div>
-            <h1 className={styles.heroTitle}>
-              Strong foundations.
-              <br />
-              <span className={styles.heroMark}>
-                <span className={styles.heroMarkBg} aria-hidden="true" />
-                <span className={styles.heroMarkText}>Brighter futures.</span>
-              </span>
-            </h1>
-            <p className={styles.heroLead}>
-              Tailored tuition that helps your child learn, grow and thrive
-              &mdash; from the early years right through to their A-Level exams.
-            </p>
-            <div className={styles.heroButtons}>
-              <Link href="/book" className={styles.btnPrimary}>
-                Send an enquiry &rarr;
-              </Link>
-              <a href="#how" className={styles.btnSecondary}>
-                How it works
-              </a>
-            </div>
-            <ul className={styles.heroAssurances} aria-label="Tuition overview">
-              <li>40+ students supported</li>
-              <li>Through our first academic year</li>
-              <li>Never in groups</li>
-            </ul>
-          </div>
-          <div className={styles.heroPhoto}>
-            <div className={styles.heroPhotoImg}>
-              <Image
-                src="/images/hero-tutor-student.jpg"
-                alt="Tutor and student working together during an online one-to-one lesson"
-                fill
-                sizes="(max-width: 1100px) 100vw, 50vw"
-                priority
-                style={{ objectFit: "cover" }}
-              />
-            </div>
-            <div className={styles.heroFloatChip}>
-              <div className={styles.heroFloatChipTitle}>One-to-one, 60 min</div>
-              <div className={styles.heroFloatChipSub}>TIMED AROUND SCHOOL</div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroScene />
 
       {/* ── Level Marquee ─────────────────────────────── */}
       <Marquee items={marqueeItems} />
 
+      {/* ── Trust / proof: the narrative's second beat, right after the hero. Reveal
+          variant="static" throughout, not "soft": on mobile this block sits inside the initial
+          viewport, so a reveal here would hide an LCP candidate. ── */}
+      <SceneShell tone="navy" intensity="quiet">
+        <div className={styles.statsStrip}>
+          <Reveal variant="static">
+            <div className={`${styles.stat} ${styles.statFirst}`}>
+              <StatCounter target={40} suffix="+" className={styles.statValue} />
+              <span className={styles.statLabel}>students supported</span>
+            </div>
+          </Reveal>
+          <Reveal variant="static">
+            <div className={`${styles.stat} ${styles.statOther}`}>
+              <b className={styles.statValue}>1</b>
+              <span className={styles.statLabel}>full academic year</span>
+            </div>
+          </Reveal>
+          <Reveal variant="static">
+            <div className={`${styles.stat} ${styles.statOther}`}>
+              <b className={styles.statValue}>Y1&ndash;A2</b>
+              <span className={styles.statLabel}>every stage covered</span>
+            </div>
+          </Reveal>
+          <Reveal variant="static">
+            <div className={`${styles.stat} ${styles.statOther}`}>
+              <b className={`${styles.statValue} ${styles.statValueGreen}`}>1:1</b>
+              <span className={styles.statLabel}>always, never groups</span>
+            </div>
+          </Reveal>
+        </div>
+      </SceneShell>
+
+      <SectionHandoff from="navy" to="cream" />
+
       {/* ── Why Us ────────────────────────────────────── */}
       <section id="why" className={styles.whySection}>
-        <ScrollReveal>
+        <MaskedText className={styles.homeStatement}>
+          Every child learns differently. We build the tuition around them —
+          not the other way round.
+        </MaskedText>
+        <Reveal variant="editorial">
           <p className={styles.eyebrow}>Why families choose us</p>
           <h2 className={styles.sectionTitle}>Three things we won&apos;t compromise on</h2>
           <p className={styles.sectionSubtitle}>Every session, every student.</p>
-        </ScrollReveal>
+        </Reveal>
         <div className={styles.whyGrid}>
-          <ScrollReveal>
+          <Reveal variant="scale">
             <div className={`${styles.whyCard} ${styles.whyCardNavy}`}>
               <div className={styles.whyCardHeader}>
                 <div className={`${styles.whyCardIcon} ${styles.whyCardIconNavy}`}>
-                  <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "#087363" }}>
+                  <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "#087363" }} aria-hidden="true">
                     <circle cx="12" cy="8" r="3.4" stroke="currentColor" strokeWidth="1.8" />
                     <path d="M5 19c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
                 </div>
-                <span className={styles.whyCardNumber} style={{ color: "rgba(8,115,99,.9)" }}>01</span>
+                {/* The brighter green: rgba(8,115,99,.9) only cleared 2.09:1 against this card's
+                    navy background, well under AA's 4.5:1. */}
+                <span className={styles.whyCardNumber} style={{ color: "#13c2a0" }}>01</span>
               </div>
               <h3 className={styles.whyCardTitle}>Truly one-to-one</h3>
               <p className={styles.whyCardText}>No groups, no shared screens. The whole session belongs to your child.</p>
             </div>
-          </ScrollReveal>
-          <ScrollReveal delay={110}>
+          </Reveal>
+          <Reveal variant="scale" delay={0.11}>
             <div className={`${styles.whyCard} ${styles.whyCardWhite}`}>
               <div className={styles.whyCardHeader}>
                 <div className={`${styles.whyCardIcon} ${styles.whyCardIconWhite}`}>
-                  <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "#075f52" }}>
+                  <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "#075f52" }} aria-hidden="true">
                     <path d="M4 12l5 5 11-11" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
@@ -171,12 +181,12 @@ export default function HomePage() {
               <h3 className={styles.whyCardTitle}>Built around your child</h3>
               <p className={styles.whyCardText}>We start from where they are now and what they feel stuck on, then plan from there.</p>
             </div>
-          </ScrollReveal>
-          <ScrollReveal delay={220}>
+          </Reveal>
+          <Reveal variant="scale" delay={0.22}>
             <div className={`${styles.whyCard} ${styles.whyCardGreen}`}>
               <div className={styles.whyCardHeader}>
                 <div className={`${styles.whyCardIcon} ${styles.whyCardIconGreen}`}>
-                  <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "#fff" }}>
+                  <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "#fff" }} aria-hidden="true">
                     <path d="M4 20V10M10 20V6M16 20v-5M22 20V4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
                   </svg>
                 </div>
@@ -185,13 +195,13 @@ export default function HomePage() {
               <h3 className={styles.whyCardTitle}>Progress you can see</h3>
               <p className={styles.whyCardText}>Confidence first, then the results that follow it.</p>
             </div>
-          </ScrollReveal>
+          </Reveal>
         </div>
       </section>
 
       {/* ── How It Works ──────────────────────────────── */}
       <section id="how" className={styles.howSection}>
-        <ScrollReveal>
+        <Reveal variant="side">
           <div className={styles.howImage}>
             <Image
               src="/images/parent-child-homework.jpg"
@@ -201,38 +211,25 @@ export default function HomePage() {
               style={{ objectFit: "cover" }}
             />
           </div>
-        </ScrollReveal>
-        <ScrollReveal delay={120}>
+        </Reveal>
+        <Reveal variant="soft" delay={0.12}>
           <p className={styles.eyebrow}>How it works</p>
           <h2 className={styles.howTitle}>Four steps, no obligation</h2>
-          <div className={styles.howSteps}>
-            <div className={styles.howStepsLine} aria-hidden="true" />
-            {howSteps.map((step, i) => (
-              <div key={step.title} className={styles.howStep}>
-                <span className={`${styles.howStepNumber} ${step.last ? styles.howStepNumberNavy : styles.howStepNumberGreen}`}>
-                  {i + 1}
-                </span>
-                <div className={styles.howStepContent}>
-                  <h4 className={styles.howStepTitle}>{step.title}</h4>
-                  <p className={styles.howStepText}>{step.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollReveal>
+          <LearningPathScene steps={howSteps} />
+        </Reveal>
       </section>
 
       {/* ── Subjects ──────────────────────────────────── */}
       <section id="subjects" className={styles.subjectsSection}>
-        <ScrollReveal>
+        <Reveal variant="mask">
           <div className={styles.subjectsSectionHeader}>
             <h2>Four subjects, every stage</h2>
             <span className={styles.subjectsSectionRange}>KS2 &rarr; A-LEVEL</span>
           </div>
-        </ScrollReveal>
+        </Reveal>
         <div className={styles.subjectsGrid}>
           {subjectCards.map((subject, i) => (
-            <ScrollReveal key={subject.slug} delay={i * 90}>
+            <Reveal variant="scale" key={subject.slug} delay={i * 0.09}>
               <Link href={`/${subject.slug}`} className={styles.subjectCard}>
                 <div className={styles.subjectCardImage}>
                   <Image
@@ -243,29 +240,38 @@ export default function HomePage() {
                     sizes="(max-width: 1100px) 100vw, 50vw"
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />
+                  <div className={styles.subjectCardMotif}>
+                    <SubjectMotif subject={subject.subject} />
+                  </div>
                 </div>
                 <div className={styles.subjectCardBody}>
+                  <div
+                    className={styles.subjectCardIcon}
+                    style={{ color: SUBJECT_ACCENT[subject.subject], background: `${SUBJECT_ACCENT[subject.subject]}14` }}
+                  >
+                    <SubjectIcon subject={subject.subject} />
+                  </div>
                   <h3>{subject.title}</h3>
                   <p>{subject.description}</p>
-                  <span className={styles.subjectCardLink}>{subject.range} &rarr;</span>
+                  <span className={styles.subjectCardLink}>{subject.range} <span className={styles.subjectCardArrow} aria-hidden="true">&rarr;</span></span>
                 </div>
               </Link>
-            </ScrollReveal>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* ── Levels ────────────────────────────────────── */}
       <section id="levels" className={styles.levelsSection}>
-        <ScrollReveal>
+        <Reveal variant="editorial">
           <p className={styles.eyebrow}>Levels we cover</p>
           <h2 className={styles.sectionTitle} style={{ marginBottom: 28 }}>
             From first steps to final exams
           </h2>
-        </ScrollReveal>
+        </Reveal>
         <div className={styles.levelsGrid}>
           {levels.map((level, i) => (
-            <ScrollReveal key={level.name} delay={i * 80}>
+            <Reveal variant="side" key={level.name} delay={i * 0.08}>
               <div className={`${styles.levelRow} ${level.dark ? styles.levelRowDark : ""}`}>
                 <div>
                   <div className={styles.levelName}>{level.name}</div>
@@ -276,39 +282,100 @@ export default function HomePage() {
                   <div className={styles.levelBarFill} style={{ width: `${level.fill}%` }} />
                 </div>
               </div>
-            </ScrollReveal>
+            </Reveal>
           ))}
         </div>
       </section>
 
-      {/* ── Stats ─────────────────────────────────────── */}
-      <div className={styles.statsStrip}>
-        <ScrollReveal>
-          <div className={`${styles.stat} ${styles.statFirst}`}>
-            <StatCounter target={40} suffix="+" className={styles.statValue} />
-            <span className={styles.statLabel}>students supported</span>
+      {/* ── Tutor standards / safeguarding trust ───────── */}
+      <section className={styles.trustSection}>
+        <Reveal variant="scale">
+          <div className={styles.trustCard}>
+            <div>
+              <p className={styles.eyebrow}>Tutor standards</p>
+              <h2 className={styles.sectionTitle}>Every tutor is DBS-checked</h2>
+              <p className={styles.trustText}>
+                Every tutor goes through a thorough hiring process before
+                teaching a LearnThrive student, including a Disclosure and
+                Barring Service (DBS) check. No tutor begins teaching until
+                this process is complete.
+              </p>
+              <Link href="/safeguarding" className={styles.trustLink}>
+                Read our full safeguarding commitment <span aria-hidden="true">&rarr;</span>
+              </Link>
+            </div>
+            <SafeguardingScene />
           </div>
-        </ScrollReveal>
-        <ScrollReveal delay={80}>
-          <div className={`${styles.stat} ${styles.statOther}`}>
-            <b className={styles.statValue}>1</b>
-            <span className={styles.statLabel}>full academic year</span>
-          </div>
-        </ScrollReveal>
-        <ScrollReveal delay={160}>
-          <div className={`${styles.stat} ${styles.statOther}`}>
-            <b className={styles.statValue}>Y1&ndash;A2</b>
-            <span className={styles.statLabel}>every stage covered</span>
-          </div>
-        </ScrollReveal>
-        <ScrollReveal delay={240}>
-          <div className={`${styles.stat} ${styles.statOther}`}>
-            <b className={`${styles.statValue} ${styles.statValueGreen}`}>1:1</b>
-            <span className={styles.statLabel}>always, never groups</span>
-          </div>
-        </ScrollReveal>
-      </div>
+        </Reveal>
+      </section>
 
+      {/* ── Testimonials / parent stories ──────────────── */}
+      <section className={styles.testimonialsSection}>
+        <Reveal variant="editorial">
+          <p className={styles.eyebrow}>What families say</p>
+          <h2 className={styles.sectionTitle} style={{ marginBottom: 28 }}>
+            Real progress, in their words
+          </h2>
+        </Reveal>
+        <div className={styles.testimonialsGrid}>
+          {testimonials.slice(0, 3).map((testimonial, i) => {
+            const featured = i === 1;
+            const figure = (
+              <figure
+                className={`${styles.testimonialCard} ${featured ? styles.testimonialCardFeatured : styles.testimonialCardSide}`}
+              >
+                <blockquote className={styles.testimonialQuote}>{testimonial.quote}</blockquote>
+                <figcaption className={styles.testimonialAttribution}>{testimonial.attribution}</figcaption>
+              </figure>
+            );
+            return (
+              <Reveal variant="soft" key={testimonial.attribution} delay={i * 0.09}>
+                {featured ? <PointerDepth>{figure}</PointerDepth> : figure}
+              </Reveal>
+            );
+          })}
+        </div>
+      </section>
+
+      <SectionHandoff from="cream" to="navy" />
+
+      {/* ── Closing CTA: a large closing scene, the learning-path motif converging toward the
+          primary action. ── */}
+      <SceneShell tone="navy" intensity="flagship" id="closing-cta">
+        <CinematicBackdrop lightChildren={<div className={styles.closingCtaGlow} aria-hidden="true" />}>
+          <div className={styles.closingCtaGlow} aria-hidden="true" />
+        </CinematicBackdrop>
+        <div className={styles.closingCta}>
+          {/* The site's recurring "sequential stages, spatially connected" language, converging
+              here — the same dot-and-line device as How It Works and the safeguarding path,
+              echoed once more as the story closes. Static rather than scroll-linked: a closing
+              summary, not another scene to scroll through. */}
+          <ol className={styles.closingSpine} aria-hidden="true">
+            {["Match", "Learn", "Understand", "Progress"].map((stage) => (
+              <li key={stage} className={styles.closingSpineItem}>
+                <span className={styles.closingSpineDot} />
+                {stage}
+              </li>
+            ))}
+          </ol>
+          <span className={styles.closingSpineConverge} aria-hidden="true" />
+          <p className={styles.closingCtaEyebrow}>Ready when you are</p>
+          <MaskedText>
+            <h2 className={styles.closingCtaTitle}>Let&apos;s find the right tutor for your child.</h2>
+          </MaskedText>
+          <p className={styles.sectionSubtitle} style={{ color: "rgba(255,255,255,0.78)" }}>
+            One conversation is all it takes to get started &mdash; no pressure, no obligation.
+          </p>
+          <div className={styles.closingCtaActions}>
+            <Link href="/book" className={styles.btnPrimary}>
+              Send an enquiry &rarr;
+            </Link>
+            <a href={`mailto:${siteConfig.email}`} className={styles.btnSecondary}>
+              Email us directly
+            </a>
+          </div>
+        </div>
+      </SceneShell>
     </div>
   );
 }

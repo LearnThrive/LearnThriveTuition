@@ -6,16 +6,6 @@
   to { opacity: 1; transform: none; }
 }
 
-@keyframes lt-marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-@keyframes lt-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-9px); }
-}
-
 @keyframes lt-mark {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
@@ -29,8 +19,14 @@
 
 /* ── Wrapper — resets global heading/body overrides ────── */
 .page {
-  --lt-navy: #143152;
-  --lt-navy-deep: #0E2540;
+  /* Previously a hardcoded #143152/#0E2540 pair that drifted from the sitewide navy
+     (globals.css's --colour-navy-900/--colour-navy-950, used on every other page — header,
+     footer, dashboard, subject-landing, book). Referencing those tokens directly instead of a
+     near-duplicate hex makes this page's navy match the rest of the site again; both replacement
+     values are darker than what they replace, so every existing contrast pairing (white text on
+     navy, navy text on cream) only improves, never regresses. */
+  --lt-navy: var(--colour-navy-900);
+  --lt-navy-deep: var(--colour-navy-950);
   --lt-green: #075f52;
   --lt-green-dark: #075f52;
   --lt-green-light: #087363;
@@ -38,7 +34,10 @@
   --lt-cream-light: #FBF8F1;
   --lt-border: #E7DFCD;
   --lt-ink: #26333F;
-  --lt-text: #64727E;
+  /* #64727E only cleared 4.43:1 on this page's cream background — just under AA's 4.5:1, and
+     this token is only ever used as a text colour (never a background), so darkening it here
+     helps every usage and can't regress any of them. */
+  --lt-text: #586573;
   --lt-font-heading: var(--font-bricolage), sans-serif;
   --lt-font-body: var(--font-public-sans), system-ui, sans-serif;
   --lt-font-mono: var(--font-ibm-plex-mono), monospace;
@@ -59,19 +58,6 @@
   letter-spacing: -0.02em;
 }
 
-/* ── Scroll-reveal (global class used by ScrollReveal component) ── */
-:global(.rv) {
-  opacity: 0;
-  transform: translateY(24px);
-}
-
-:global(.rv.rv--in) {
-  opacity: 1;
-  transform: none;
-  transition: opacity 0.75s cubic-bezier(0.2, 0.7, 0.3, 1),
-    transform 0.75s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
-
 /* ── Hero ──────────────────────────────────────────────── */
 .hero {
   position: relative;
@@ -89,6 +75,11 @@
   pointer-events: none;
 }
 
+/* A soft green glow behind the hero. It used to be a flat disc put through `filter: blur(10px)` and
+   floated by an infinite animation: a filtered layer re-applying its blur on every frame, forever,
+   whether or not the hero was on screen (plan11.md task 5). The soft edge is now baked into a radial
+   gradient, so there is no filter to re-apply, and the layer is static — motion on it, where a page
+   wants any, comes from scrolling (a bounded parallax), never from a loop. */
 .heroGlow {
   position: absolute;
   left: -120px;
@@ -96,21 +87,35 @@
   width: 380px;
   height: 380px;
   border-radius: 50%;
-  background: rgba(7, 95, 82, 0.18);
-  filter: blur(10px);
+  background: radial-gradient(closest-side, rgba(7, 95, 82, 0.18) calc(100% - 22px), rgba(7, 95, 82, 0) 100%);
   pointer-events: none;
-  animation: lt-float 11s ease-in-out infinite;
 }
 
 .heroGrid {
   position: relative;
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
-  min-height: 470px;
+  /* plan12.md task 3: "increase hero visual scale beyond a conventional split layout" — was a
+     fixed 470px, noticeably shorter than a real first-arrival scene on any screen taller than a
+     laptop. A viewport-relative min-height with a floor (so it never collapses on a short landscape
+     window) and a ceiling (so it never forces scrolling past what a tall 4K monitor needs) gives it
+     real presence without becoming a fixed, unreadable-on-some-screens height. */
+  min-height: clamp(470px, 86vh, 920px);
+}
+
+/* The hero is 86vh tall (up to 920px); a copy block pinned to the top left a quarter of the panel
+   empty beneath it, so the column centres it vertically instead. */
+.heroCopyWrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .heroCopy {
-  padding: 60px 44px 60px 40px;
+  /* On very wide screens the photo still bleeds to the right edge, so the copy moves in with the
+     page's own centred column rather than staying 40px from the far left, which left 600px of
+     empty navy between the two on a 2560px display. The clamp is inert below 1760px. */
+  padding: 60px 44px 60px max(40px, calc((100vw - 1760px) / 2 + 40px));
 }
 
 .heroChip {
@@ -137,7 +142,9 @@
 }
 
 .heroTitle {
-  font-size: clamp(34px, 4.4vw, 56px) !important;
+  /* plan12.md task 3: larger ceiling (was 56px) so the headline actually uses the taller hero's
+     extra room on capable desktops; the floor is untouched, so small screens are unaffected. */
+  font-size: clamp(34px, 5vw, 68px) !important;
   line-height: 0.97 !important;
   letter-spacing: -0.03em !important;
   color: #fff !important;
@@ -190,10 +197,15 @@
   font-weight: 600;
   font-size: 16.5px;
   padding: 16px 30px;
-  border-radius: 999px;
+  /* Matches globals.css's .button (the shared CTA used sitewide via ButtonLink) rather than a
+     full pill — the two button implementations still can't be merged outright (.btnSecondary's
+     on-dark-background treatment covers a case .button--secondary doesn't), but converging the
+     shape closes the most visible "two systems" tell, and this only touches the homepage/subjects
+     pages where these two classes are used — no other page's buttons are affected. */
+  border-radius: 0.62rem;
   text-decoration: none;
   box-shadow: 0 14px 30px -16px rgba(7, 95, 82, 0.9);
-  transition: transform 0.2s, background 0.2s;
+  transition: transform 0.2s var(--ease-snappy), background 0.2s var(--ease-snappy);
   border: none;
   cursor: pointer;
   font-family: var(--lt-font-body);
@@ -204,6 +216,10 @@
   background: var(--lt-green-dark);
   color: #fff;
 }
+.btnPrimary:active {
+  transform: translateY(-1px) scale(0.97);
+  transition-duration: var(--duration-instant);
+}
 
 .btnSecondary {
   display: inline-block;
@@ -211,15 +227,19 @@
   font-weight: 600;
   font-size: 16px;
   padding: 15px 22px;
-  border-radius: 999px;
+  border-radius: 0.62rem;
   text-decoration: none;
   border: 2px solid rgba(255, 255, 255, 0.35);
-  transition: background 0.2s;
+  transition: background 0.2s var(--ease-snappy), transform 0.2s var(--ease-snappy);
 }
 
 .btnSecondary:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+}
+.btnSecondary:active {
+  transform: scale(0.97);
+  transition-duration: var(--duration-instant);
 }
 
 .heroAssurances {
@@ -263,6 +283,11 @@
   object-fit: cover;
 }
 
+/* One-time settle, not a perpetual bob — a floating card that never stops moving reads as
+   decoration rather than product, and plan9.md section 6 explicitly rules it out ("DO NOT make
+   the hero continuously float... after approximately the first second, the hero should largely
+   settle"). Reuses lt-rise (the same keyframe the hero copy already settles with) rather than
+   inventing a second one-shot animation for the same job. */
 .heroFloatChip {
   position: absolute;
   left: -30px;
@@ -271,7 +296,7 @@
   border-radius: 14px;
   padding: 12px 16px;
   box-shadow: 0 18px 34px -20px rgba(0, 0, 0, 0.45);
-  animation: lt-float 8s ease-in-out infinite;
+  animation: lt-rise 0.7s both 0.6s;
   z-index: 1;
 }
 
@@ -288,31 +313,6 @@
   font-size: 10.5px;
   color: var(--lt-green-dark);
   margin-top: 3px;
-}
-
-/* ── Marquee ───────────────────────────────────────────── */
-:global(.lt-marquee) {
-  background: var(--lt-green);
-  color: #fff;
-  overflow: hidden;
-  padding: 14px 0;
-  white-space: nowrap;
-  border-block: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-:global(.lt-marquee:hover .lt-marquee__track) {
-  animation-play-state: paused;
-}
-
-:global(.lt-marquee__track) {
-  display: inline-flex;
-  gap: 44px;
-  font-family: var(--font-bricolage), sans-serif;
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: 0.04em;
-  animation: lt-marquee 26s linear infinite;
-  padding-right: 44px;
 }
 
 /* ── Why Us Cards ──────────────────────────────────────── */
@@ -337,38 +337,78 @@
   max-width: 24ch;
 }
 
+/* plan12.md task 3's "1-2 high-impact editorial statements": oversized, plain-text, no card or
+   eyebrow — the statement itself is the whole moment. */
+.homeStatement {
+  font-family: var(--lt-font-heading);
+  font-weight: 800;
+  font-size: clamp(28px, 4.2vw, 52px);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--lt-navy);
+  max-width: 18ch;
+  margin: 0 0 44px;
+}
+
 .sectionSubtitle {
   margin: 0 0 34px;
   color: var(--lt-text);
   font-size: 16.5px;
 }
 
+/* plan12.md task 3's anti-generic rule: three equal cards is the exact
+   eyebrow/heading/paragraph/three-cards shape it calls out. The first differentiator ("truly
+   one-to-one") carries the section's real argument — everything else follows from it — so it gets
+   more room instead of matching its siblings; the asymmetry itself is the point, not just the
+   ratio. */
 .whyGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1.35fr 1fr 1fr;
   gap: 20px;
 }
 
+/* The hover shadow lives on a pseudo-element that is drawn once and only fades in. Interpolating
+   `box-shadow` itself repaints the whole 44px-blurred region on every frame of the transition;
+   an opacity change on an already-painted layer is compositor work (plan11.md task 5). The colour
+   comes from --lift-shadow so each variant only has to name its shadow. */
 .whyCard {
+  position: relative;
   border-radius: 22px;
   padding: 28px;
   min-height: 230px;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s, box-shadow 0.3s;
+  --lift-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.5);
+  transition: transform 0.3s var(--ease-snappy);
+}
+
+.whyCard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--lift-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease-snappy);
+}
+
+.whyCard:hover::after {
+  opacity: 1;
 }
 
 .whyCard:hover {
   transform: translateY(-7px);
 }
+.whyCard:active {
+  transform: translateY(-4px) scale(0.99);
+  transition-duration: var(--duration-instant);
+}
 
 .whyCardNavy {
   background: var(--lt-navy);
   color: #fff;
-}
-
-.whyCardNavy:hover {
-  box-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.85);
+  --lift-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.85);
 }
 
 .whyCardNavy h3 {
@@ -378,19 +418,13 @@
 .whyCardWhite {
   background: #fff;
   border: 1px solid var(--lt-border);
-}
-
-.whyCardWhite:hover {
-  box-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.5);
+  --lift-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.5);
 }
 
 .whyCardGreen {
   background: var(--lt-green);
   color: #fff;
-}
-
-.whyCardGreen:hover {
-  box-shadow: 0 26px 44px -28px rgba(7, 95, 82, 0.85);
+  --lift-shadow: 0 26px 44px -28px rgba(7, 95, 82, 0.85);
 }
 
 .whyCardGreen h3 {
@@ -490,13 +524,49 @@
   position: relative;
 }
 
+/* plan9.md section 7's "learning path" brand motif — a thin LearnThrive-green line connecting
+   the steps as they're read. plan10.md section 5 takes it further: LearningPathScene.tsx now
+   drives this as a real SVG path that draws in on scroll instead of always being fully drawn.
+   .howStepsLine (the flat CSS version) is kept as the reduced-motion fallback the scene renders
+   instead of the SVG — same visual result, no motion. */
 .howStepsLine {
   position: absolute;
   left: 17px;
   top: 12px;
   bottom: 22px;
   width: 2px;
-  background: var(--lt-border);
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--lt-green-dark) 0,
+    var(--lt-green-dark) 5px,
+    transparent 5px,
+    transparent 11px
+  );
+}
+
+.howStepsPathWrap {
+  position: relative;
+}
+
+/* Same absolute box the CSS fallback above uses — top+bottom (no explicit height) lets the box
+   stretch to match however tall the steps actually render, which varies with wrapped text. This
+   has to be a plain div, not the <svg> itself: SVG is a CSS replaced element, and top+bottom
+   implying an auto height reliably resolves for ordinary boxes but not for replaced elements,
+   which fall back to their own intrinsic size (here, the viewBox's literal 100 units → 100px)
+   instead of stretching. The inner SVG (width/height 100%, preserveAspectRatio="none") then
+   fills this already-correctly-sized track via ordinary percentage sizing. */
+.howStepsPathTrack {
+  position: absolute;
+  left: 17px;
+  top: 12px;
+  bottom: 22px;
+  width: 2px;
+}
+
+.howStepsPathSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .howStep {
@@ -523,6 +593,7 @@
   font-family: var(--lt-font-heading);
   font-weight: 800;
   font-size: 15px;
+  transition: background 0.3s var(--ease-snappy, ease), color 0.3s var(--ease-snappy, ease);
 }
 
 .howStepNumberGreen {
@@ -531,6 +602,16 @@
 
 .howStepNumberNavy {
   background: var(--lt-navy);
+}
+
+/* plan12.md task 5: the path now visibly "activates" stages as it draws, not just the line itself
+   — a step the scroll position hasn't reached yet reads as pending until it does. Only the number
+   badge's colour changes; the step's own title/text stay at full, unchanged contrast (an opacity
+   reduction on the step previously failed axe's color-contrast check — --lt-text on this
+   background already sits close to AA's floor with no margin to spend). */
+.howStepNumberPending {
+  background: var(--lt-border);
+  color: var(--lt-navy);
 }
 
 .howStepContent {
@@ -580,31 +661,83 @@
 }
 
 .subjectCard {
+  position: relative;
   background: #fff;
   border: 1px solid var(--lt-border);
   border-radius: 22px;
-  overflow: hidden;
-  transition: box-shadow 0.3s, transform 0.3s;
+  --lift-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.55);
+  transition: transform 0.3s var(--ease-snappy), border-color 0.3s var(--ease-snappy);
   text-decoration: none;
   color: inherit;
   display: block;
 }
 
-.subjectCard:hover {
-  box-shadow: 0 26px 44px -28px rgba(20, 49, 82, 0.55);
-  transform: translateY(-5px);
-  color: inherit;
+.subjectCard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--lift-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease-snappy);
 }
 
+.subjectCard:hover::after {
+  opacity: 1;
+}
+
+.subjectCard:hover {
+  transform: translateY(-5px);
+  border-color: var(--lt-green);
+  color: inherit;
+}
+.subjectCard:active {
+  transform: translateY(-3px) scale(0.995);
+  transition-duration: var(--duration-instant);
+}
+.subjectCardImage img { transition: transform 0.4s var(--ease-snappy); }
+.subjectCard:hover .subjectCardImage img { transform: scale(1.04); }
+.subjectCardArrow { display: inline-block; transition: transform var(--duration-fast) var(--ease-snappy); }
+.subjectCard:hover .subjectCardArrow { transform: translateX(4px); }
+
 .subjectCardImage {
+  position: relative;
   height: 132px;
   overflow: hidden;
+  /* The card's own radius (22px) minus its 1px border. */
+  border-radius: 21px 21px 0 0;
 }
 
 .subjectCardImage img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* plan9.md section 13: a subtle, abstract per-subject motif (coordinate grid / editorial curves /
+   molecular diagram / pathway dots — see SubjectIcon.tsx's SubjectMotif) rather than four
+   identical generic cards. Sits over the image's bottom-right corner at low opacity so it reads
+   as texture, not as a second competing graphic. */
+.subjectCardMotif {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 90px;
+  height: 90px;
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.subjectCardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 0.7rem;
+  margin-bottom: 14px;
 }
 
 .subjectCardBody {
@@ -630,6 +763,11 @@
   color: var(--lt-green-dark);
   text-decoration: none;
 }
+
+/* ── Product Demonstration ────────────────────────────────
+   Section chrome only — ProductTabs.module.css (co-located with the component) owns the tabs/
+   panel styling itself, since that component isn't homepage-only in principle even though it's
+   currently only used here. */
 
 /* ── Levels Ladder ─────────────────────────────────────── */
 .levelsSection {
@@ -688,7 +826,10 @@
 }
 
 .levelRowDark .levelYears {
-  color: var(--lt-green-light);
+  /* --lt-green-light (#087363) is fine everywhere it sits on the cream/white sections (5.2-5.8:1)
+     but only 2.5:1 on this row's own dark navy background — a brighter one-off here rather than
+     changing the shared token and risking the other light-background usages. */
+  color: #13c2a0;
 }
 
 .levelDesc {
@@ -724,13 +865,15 @@
 }
 
 /* ── Stats Strip ───────────────────────────────────────── */
+/* plan12.md task 3: now the first section after the hero, wrapped in <SceneShell tone="navy">
+   (its background/color/padding move there) rather than its own bespoke navy block — same
+   destination as before, just via the shared primitive every other cinematic scene now uses. */
 .statsStrip {
-  background: var(--lt-navy);
-  color: #fff;
-  padding: 56px 40px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
+  max-width: 1080px;
+  margin: 0 auto;
 }
 
 .stat {
@@ -755,7 +898,9 @@
 }
 
 .statValueGreen {
-  color: var(--lt-green-light) !important;
+  /* Same fix as .levelRowDark .levelYears just above in this file: --lt-green-light only clears
+     2.5:1 on this dark section's background, well under AA even at this large size (3:1). */
+  color: #13c2a0 !important;
 }
 
 .statLabel {
@@ -763,64 +908,272 @@
   color: rgba(255, 255, 255, 0.72);
 }
 
-/* ── Enquiry Section ───────────────────────────────────── */
-.enquirySection {
-  padding: 60px 40px;
+/* ── Tutor standards / safeguarding ──────────────────────────
+   Only claims plan9.md was explicitly told are true (a DBS check as part of every tutor's hiring
+   process) — not the fuller "identity checked / qualifications reviewed" checklist an earlier
+   draft of this section used, which nothing on the site actually substantiates. */
+.trustSection {
+  padding: 64px 40px;
+}
+
+.trustCard {
   display: grid;
-  grid-template-columns: 0.9fr 1.1fr;
-  gap: 46px;
-  align-items: start;
-}
-
-.enquiryCopy h2 {
-  font-size: 40px !important;
-  line-height: 1.03 !important;
-  margin: 0 0 16px !important;
-}
-
-.enquiryCopyLead {
-  font-size: 16.5px;
-  line-height: 1.6;
-  color: var(--lt-text);
-  margin: 0 0 22px;
-}
-
-.enquiryContact {
-  display: grid;
-  gap: 10px;
-  font-size: 15px;
-  color: var(--lt-navy);
-}
-
-.enquiryFormWrapper {
-  background: #fff;
-  border: 1px solid var(--lt-border);
-  border-radius: 22px;
-  padding: 30px;
-  box-shadow: 0 22px 44px -30px rgba(20, 49, 82, 0.5);
-}
-
-/* ── Mini Footer ───────────────────────────────────────── */
-.miniFooter {
-  background: var(--lt-navy-deep);
-  color: rgba(255, 255, 255, 0.66);
-  padding: 28px 40px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 13.5px;
-}
-
-.miniFooterBrand {
-  font-family: var(--lt-font-heading);
-  font-weight: 800;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 40px;
+  align-items: center;
+  padding: 44px;
+  border-radius: 1.5rem;
+  background: var(--lt-navy);
   color: #fff;
+}
+
+.trustCard .sectionTitle {
+  color: #fff !important;
+}
+
+/* The shared eyebrow colour is the dark green used on light surfaces (1.9:1 against this navy card).
+   The site's on-navy accent is the mint used everywhere else on dark backgrounds (8.3:1). */
+.trustCard .eyebrow {
+  color: #8ed2ad;
+}
+
+.trustText {
+  margin: 14px 0 20px;
   font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 48ch;
+}
+
+.trustLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #8ed2ad;
+  font-weight: 600;
+  font-size: 15px;
   text-decoration: none;
 }
 
-.miniFooterBrand span {
-  color: var(--lt-green);
+.trustList {
+  display: grid;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
+
+.trustListItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15.5px;
+  color: #fff;
+}
+
+.trustListItem svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin-top: 1px;
+  color: #8ed2ad;
+}
+
+@media (max-width: 900px) {
+  .trustCard {
+    grid-template-columns: 1fr;
+    padding: 32px 26px;
+  }
+}
+
+/* ── Testimonials ──────────────────────────────────────────
+   Real, attributed parent quotes from src/lib/site.ts's `testimonials` export (already covered
+   by tests/site.test.mjs's "testimonial attributions are preserved" test) — not previously
+   rendered anywhere on the site. globals.css has an older .testimonial-grid/.testimonial-card
+   system, but it's unused by any page and built on the sitewide --colour-* tokens rather than
+   this page's --lt-* ones, so a fresh, homepage-native treatment here avoids mixing two card
+   languages on one page rather than resurrecting dead CSS wholesale. */
+.testimonialsSection {
+  padding: 64px 40px;
+}
+
+/* plan12.md task 10: "central quote may settle forward; neighbours can remain partially visible" —
+   an asymmetric composition instead of three equal cards, not a real carousel (no autoplay, no
+   scroll-jacking is the task's own explicit rule). The centre item is simply bigger and fully
+   opaque; the two either side read as present but secondary. */
+.testimonialsGrid {
+  display: grid;
+  grid-template-columns: 0.86fr 1.16fr 0.86fr;
+  align-items: center;
+  gap: 20px;
+}
+
+.testimonialCard {
+  padding: 28px 26px;
+  border: 1px solid var(--lt-border);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.testimonialCardFeatured {
+  padding: 36px 32px;
+  box-shadow: var(--shadow-md, 0 20px 44px -24px rgba(20, 49, 82, 0.3));
+}
+
+/* No opacity reduction on the side cards: axe caught that this dropped .testimonialAttribution's
+   text below AA contrast (the same class of bug docs/MOTION_PERFORMANCE_AUDIT.md's M-05 addendum
+   and this plan's own earlier .howStepPending fix both hit) — the size/shadow/padding difference
+   from .testimonialCardFeatured already reads as "settles forward" without touching real text. */
+.testimonialCardSide {
+  box-shadow: none;
+}
+
+.testimonialQuote {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--lt-ink);
+}
+
+.testimonialCardFeatured .testimonialQuote {
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.testimonialQuote::before {
+  content: "\201C";
+  color: var(--lt-green-dark);
+}
+
+.testimonialQuote::after {
+  content: "\201D";
+  color: var(--lt-green-dark);
+}
+
+.testimonialAttribution {
+  font-family: var(--lt-font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  color: var(--lt-text);
+}
+
+@media (max-width: 900px) {
+  .testimonialsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Enquiry Section ───────────────────────────────────── */
+
+/* plan13.md task 6: with align-items: start, the copy column (~190px) sat pinned to the top of a
+   ~1060px form column, leaving most of the section as dead cream space beside it. Sticky — the
+   same fix .booking-sidebar already uses next to /book's own tall column — keeps it in view as
+   the form scrolls past, instead of trying to pad short copy out to match a much taller form. */
+
+/* ── Closing CTA (plan12.md task 3) ───────────────────────
+   A deliberately light stub: task 10 owns the full "large cinematic closing scene, learning-path
+   motif converging into the final action" build. This exists so the page's narrative arc actually
+   completes instead of just stopping after the enquiry form — task 10 replaces the content, not
+   the section's place in the story. */
+.closingCta {
+  position: relative;
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* plan12.md task 10: a large cinematic closing scene — a soft, static glow (same "no filter, no
+   perpetual animation" shape as the hero's own .heroGlow, M-01's fix) rather than the spine motif
+   alone carrying the whole moment. */
+.closingCtaGlow {
+  position: absolute;
+  left: 50%;
+  top: -10%;
+  width: 640px;
+  height: 640px;
+  margin-left: -320px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(7, 95, 82, 0.16) calc(100% - 30px), rgba(7, 95, 82, 0) 100%);
+  pointer-events: none;
+}
+
+/* The learning-path motif "converging into the final action": a short line from the spine straight
+   down to the headline that follows it — the same idea as the drawn connectors elsewhere on the
+   site, reduced to its simplest form for a moment this brief. */
+.closingSpineConverge {
+  display: block;
+  width: 1px;
+  height: 28px;
+  margin: 0 auto 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+}
+
+/* plan12.md task 5: the recurring "sequential stages" device (dot + connecting line), horizontal
+   here rather than vertical — a closing summary rather than another scrollable scene. */
+.closingSpine {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  flex-wrap: wrap;
+}
+
+.closingSpineItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--lt-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.closingSpineItem:not(:last-child)::after {
+  content: "";
+  width: 28px;
+  height: 1px;
+  margin: 0 14px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.closingSpineDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #13c2a0;
+}
+
+.closingCtaEyebrow {
+  font-family: var(--lt-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  /* Same fix as contact.module.css's .cardNavy .cardLabel / home.module.css's own
+     .levelRowDark .levelYears: --lt-green-light only clears ~2.5:1 on navy, under AA. */
+  color: #13c2a0;
+  margin-bottom: 18px;
+}
+
+.closingCtaTitle {
+  color: #fff !important;
+  font-size: clamp(32px, 5.5vw, 64px) !important;
+  line-height: 1.03 !important;
+  margin: 0 0 28px !important;
+}
+
+.closingCtaActions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Mini Footer ───────────────────────────────────────── */
 
 /* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 1100px) {
@@ -830,6 +1183,13 @@
 
   .heroPhoto {
     min-height: 300px;
+  }
+
+  /* The 86vh scale above is a desktop-only "presence" figure — on a single stacked column
+     (headline + CTA + a 300px photo) it would force a lot of empty space rather than scale, so
+     mobile keeps the original, content-sized floor instead of inheriting the taller clamp. */
+  .heroGrid {
+    min-height: 470px;
   }
 
   .heroFloatChip {
@@ -864,10 +1224,6 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .enquirySection {
-    grid-template-columns: 1fr;
-  }
-
   .levelRow {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -881,9 +1237,7 @@
 @media (max-width: 640px) {
   .whySection,
   .subjectsSection,
-  .levelsSection,
-  .statsStrip,
-  .enquirySection {
+  .levelsSection {
     padding-left: 16px;
     padding-right: 16px;
   }
@@ -897,23 +1251,24 @@
     padding: 40px 16px;
   }
 
-  .statsStrip {
-    grid-template-columns: 1fr;
+  /* Side by side at this width the two buttons each wrapped their label ("Send an enquiry" left
+     its arrow orphaned on a second line). Stacked full-width they stay on one line and give a
+     larger touch target. */
+  .heroButtons {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .miniFooter {
-    flex-direction: column;
-    gap: 8px;
-    padding: 20px 16px;
+  .heroButtons > * {
+    text-align: center;
+  }
+
+  .statsStrip {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global(.rv) {
-    opacity: 1;
-    transform: none;
-  }
-
   .page,
   .page :global(*) {
     animation: none !important;

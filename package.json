@@ -17,10 +17,17 @@
     "check:full": "npm run check && npm run test:browser"
   },
   "dependencies": {
+    "framer-motion": "13.4.4",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "resend": "^6.28.0"
+  },
+  "overrides": {
+    "framer-motion": {
+      "motion-dom": "13.4.4",
+      "motion-utils": "13.3.0"
+    }
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
