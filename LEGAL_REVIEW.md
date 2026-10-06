@@ -7,7 +7,7 @@
 
 The verified public business details include the trading name **LearnThrive Tuition**, `https://www.learnthrivetuition.co.uk`, `info@learnthrivetuition.co.uk`, Tahasin Hasan's telephone number `+44 7459 839595`, Abdurrahman Mustafa's telephone number `+44 7883 745337`, and the social links in `src/lib/site.ts`. No registered legal entity, registered number or office, controller's legal identity, DPO, or named safeguarding lead has been verified.
 
-The current site is a marketing and enquiry site. Form values exist only in React memory and the site prepares a `mailto:` draft; it does not submit the form to a backend, database, CRM, payment service, or portal. The repository contains no analytics, advertising pixels, cookies, browser storage, external embeds, or external font service. Instagram, LinkedIn, and tutor-login services are contacted only if a visitor follows their external links.
+The current site is a marketing and enquiry site. Form values exist in React memory while the form is open; submitting it sends them to the site's own `/api/enquiry` route, which emails them through Resend to LearnThrive and sends a confirmation to the parent (corrected 6 October 2026: this paragraph previously described the old `mailto:` draft flow, which the site no longer uses). The site has no database, CRM, payment service, or portal. The repository contains no analytics, advertising pixels, cookies, browser storage, external embeds, or external font service. Instagram, LinkedIn, and tutor-login services are contacted only if a visitor follows their external links.
 
 ## Decisions required now
 
@@ -42,6 +42,39 @@ Outstanding factual qualifications:
 - The source and local production-browser checks found no cookies, local/session storage or third-party requests. This does not verify the live hosting/CDN configuration. Audit response headers, deployed scripts, consent-exempt storage, and third-party requests on the live domain before publication and after each hosting or feature change.
 - Re-check both notices before adding analytics, pixels, embeds, chat, booking, payment, CRM, portals, video platforms, or recording. Non-essential storage/access must not run before any required consent or other control is implemented.
 - The shared legal-page component displays **10 September 2026** as its last-reviewed date. This is an editorial review date, not evidence of company or professional legal approval.
+
+## Added by the Plan 15 design port (6 October 2026)
+
+The port brought four public pages across from the LearnThriveSoftware project. Their text is that
+project's, carried over word for word; **nobody on this project has reviewed their wording against
+LearnThrive Tuition's real practice**, and each shows a review date of 28 September 2026 that is the
+date it was written there, not evidence of approval here.
+
+- **`/complaints`** promises to acknowledge a complaint within **2 working days** and answer within
+  **10 working days**, and says LearnThrive will review an unresolved complaint again. Confirm those
+  are commitments the business will keep, or change them (`src/app/complaints/page.tsx`). It also lists
+  "billing" as a complaint topic: confirm that fits how tuition is actually invoiced.
+- **`/accessibility`** says the site **aims to meet WCAG 2.2 AA** and invites reports by email or phone.
+  The automated checks in this repository (axe-core on every page, light and dark) find no serious
+  failures, but that is not a full accessibility audit; keep the wording an aim, not a claim.
+- **`/tuition-terms`** says the terms for lessons (price, payment, scheduling, rescheduling,
+  cancellation, ending the arrangement) are confirmed with each family **in writing before tuition
+  begins**. This does not replace decision 6 above; it only explains that none are published yet.
+- **`/trust`** links to the seven policy pages and repeats facts already on the site (the company
+  details in the footer and how an enquiry is handled). It makes no accreditation, vetting or award
+  claim; add those only with evidence (decision 8 above).
+- **Unchanged and still open:** the DBS/vetting wording elsewhere on the site (decision 8). The port
+  did not touch it.
+
+**Browser storage.** The port deliberately keeps this site storage-free. The dark theme follows the
+visitor's device setting; there is no theme or motion control, nothing is saved, and the mobile
+"Book a free consultation" bar keeps its dismissal in memory only. The Cookie notice therefore needed no
+change and still says what is true. If a saved theme or motion preference is ever wanted, the notice and
+this review must be updated first (see `docs/PLAN15_PORT_COMPLETION.md`, open decision 2).
+
+**Security headers.** Production pages now send a Content-Security-Policy, HSTS for this host (not
+`includeSubDomains` or `preload`) and `Cross-Origin-Opener-Policy`; see the README. Re-audit the live
+domain's response headers after deploying, as the privacy and cookie audit above already requires.
 
 ## Future-change gate
 

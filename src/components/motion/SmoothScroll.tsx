@@ -83,7 +83,7 @@ export function SmoothScroll() {
 
       // Pause while the mobile menu (or anything else that locks body scroll) is open.
       const syncLock = () => {
-        // The mobile menu and any open dialog or command palette lock the page.
+        // The mobile menu (and anything else that adds `has-dialog` to the body) locks the page.
         if (document.body.classList.contains("menu-open") || document.body.classList.contains("has-dialog")) lenis.stop();
         else lenis.start();
       };

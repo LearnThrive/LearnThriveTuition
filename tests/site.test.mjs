@@ -158,3 +158,46 @@ test("production images exist and stay within their payload budgets", () => {
     assert.ok(statSync(fullPath).size <= limit, `${path} exceeds ${limit} bytes`);
   }
 });
+
+// plan15 Wave 12: a page that exists but is missing from the sitemap is a page search engines are
+// never told about, and one missing from ogPages gets the home page's preview card instead of its own.
+const pageFolders = readdirSync(appDir).filter(
+  (name) => statSync(join(appDir, name)).isDirectory() && existsSync(join(appDir, name, "page.tsx")),
+);
+const subjectPaths = [...siteSource.matchAll(/path: "(\/[a-z0-9-]+)"/g)].map((m) => m[1]);
+
+test("every page folder is in the sitemap and has its own preview card", () => {
+  assert.ok(pageFolders.length >= 15, "expected the marketing page folders to be found");
+  const ogSource = readFileSync(join(root, "src", "lib", "ogPages.ts"), "utf8");
+  const notInSitemap = pageFolders.filter(
+    (name) => !sitemapSource.includes(`"/${name}"`) && !subjectPaths.includes(`/${name}`),
+  );
+  assert.deepEqual(notInSitemap, [], `pages missing from sitemap.ts: ${notInSitemap.join(", ")}`);
+  const noCard = pageFolders.filter(
+    (name) => !ogSource.includes(`"/${name}":`) && !subjectPaths.includes(`/${name}`),
+  );
+  assert.deepEqual(noCard, [], `pages missing from lib/ogPages.ts: ${noCard.join(", ")}`);
+});
+
+test("robots.ts keeps crawlers out of the API only", () => {
+  const robots = readFileSync(join(appDir, "robots.ts"), "utf8");
+  assert.match(robots, /disallow: \["\/api\/"\]/);
+  assert.match(robots, /allow: "\/"/);
+});
+
+test("the trust hub links only to pages that exist, and nothing in the footer's legal row is missing from it", () => {
+  const trustBlock = siteSource.slice(siteSource.indexOf("export const trustLinks"));
+  const trustHrefs = [...trustBlock.matchAll(/href: "(\/[a-z0-9-]+)"/g)].map((m) => m[1]);
+  assert.ok(trustHrefs.length >= 7, "the hub lists the policy pages");
+  for (const href of trustHrefs) assert.ok(pageFolders.includes(href.slice(1)), `${href} has no page`);
+  const footer = readFileSync(join(root, "src", "components", "SiteFooter.tsx"), "utf8");
+  const footerLegal = [...footer.slice(footer.indexOf("const legalLinks")).matchAll(/href: "(\/[a-z0-9-]+)"/g)].map((m) => m[1]);
+  const missingFromHub = footerLegal.filter((href) => !trustHrefs.includes(href));
+  assert.deepEqual(missingFromHub, [], "every legal link in the footer is also reachable from the trust hub");
+});
+
+test("the site has no signed-in app, login or portal routes of its own", () => {
+  for (const forbidden of ["login", "dashboard", "portal-opening-soon", "dev", "403"]) {
+    assert.ok(!pageFolders.includes(forbidden), `${forbidden} must not exist on this site`);
+  }
+});

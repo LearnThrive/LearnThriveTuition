@@ -773,7 +773,9 @@ img[src*="%2Fimages%2F"] {
 .menu-toggle span {
   width: 1.25rem;
   height: 2px;
-  background: var(--surface-inverse);
+  /* The ink colour, not --surface-inverse: that one turns near-black in the dark theme, which left
+     the bars at 1.2:1 against the button. --fg-strong is navy ink in light and off-white in dark. */
+  background: var(--fg-strong);
   transition: transform 160ms ease, opacity 160ms ease;
   --focus-colour: var(--focus-colour-on-inverse);
   background-image: var(--navy-light), var(--grain);

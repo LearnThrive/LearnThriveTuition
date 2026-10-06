@@ -51,17 +51,49 @@ Run both the production checks and browser suite together with `npm run check:fu
 ## Enquiries
 
 The booking form sends the enquiry directly to LearnThrive through `/api/enquiry`, and the
-parent receives a confirmation email. The route validates every field, checks the request
-origin, rate-limits by IP and sends two emails through Resend: the notification to LearnThrive
-and the auto-reply to the enquirer. It reads these environment variables (see `.env.local`;
+parent receives a confirmation email. The route validates every field, requires the request
+origin to be an allowed one, rate-limits by IP and sends two emails through Resend (each with a
+plain-text version): the notification to LearnThrive and the auto-reply to the enquirer, which
+promises a reply within 5 working days. It reads these environment variables (see `.env.local`;
 never commit real values):
 
 - `RESEND_API_KEY` — required; without it the enquiry cannot be sent.
 - `RESEND_FROM_EMAIL` — the verified sender address.
-- `ENQUIRY_EMAIL` — where enquiries are delivered (defaults to the published inbox).
+- `ENQUIRY_EMAIL` — where enquiries are delivered (defaults to the published inbox in
+  development).
 - `ALLOWED_ORIGINS` — comma-separated origins allowed to post (defaults to the production site;
   `http://localhost:3000` is added in development, so run `npm run dev` on port 3000 if you want
   to submit a real test enquiry).
+
+**In production all three of `RESEND_API_KEY`, `RESEND_FROM_EMAIL` and `ENQUIRY_EMAIL` must be set.**
+If any is missing the route fails closed: it sends nothing and the form tells the visitor to email
+the inbox directly, rather than sending from a shared sender or to a default address.
+
+Abuse protection is invisible to a real visitor and uses no third-party service: a honeypot field
+(`website`), a minimum time between opening and sending the form (2.5 seconds, production only),
+the same enquiry sent twice within a minute counts once, and a per-IP limit. A request that trips
+the honeypot or the timer gets the normal success answer and nothing is sent. The route logs one
+line per outcome and never logs a name, email, phone, message or IP. `tests/enquiry.test.mjs`
+covers all of this.
+
+`GET /api/health` answers `{"status":"ok"}` for an uptime monitor. It reads no configuration and
+calls nothing.
+
+## Security headers
+
+`src/lib/securityHeaders.ts` builds the response headers, and `next.config.ts` applies them. In
+production every page gets a Content-Security-Policy (this site's own origin only, no `eval`, no
+framing, forms post only to this site), `Strict-Transport-Security` for this host (a year, without
+`includeSubDomains` or `preload`), `Cross-Origin-Opener-Policy: same-origin`, and the existing
+baseline; `/api/*` also sends `X-Robots-Tag: noindex`. `script-src` keeps `'unsafe-inline'` because
+a per-request nonce would make every page dynamic; the policy's value is that nothing can load from
+any other origin. If a deploy ever blocks something it should not, set `CSP_REPORT_ONLY=1` at build
+time to downgrade the policy to report-only, then fix the cause.
+
+Which of `learnthrivetuition.co.uk` and `www.learnthrivetuition.co.uk` is the canonical host is a
+setting at the hosting provider (pages declare the `www` address as canonical). There is deliberately
+no redirect between them in `next.config.ts`: a rule in code that disagreed with the host's own would
+loop.
 
 Do not describe the form as preparing an email draft anywhere on the site: that was the old
 flow, and `tests/design-port.test.mjs` fails if that wording comes back.
@@ -73,17 +105,34 @@ ported from the LearnThriveSoftware product so the marketing site and the produc
 brand. `docs/DESIGN_PARITY_AUDIT.md` maps each area of the design to what was ported, adapted or
 left out, and `docs/DESIGN_PORT_COMPLETION.md` records the port itself.
 
-- Tokens, typography and component styles: `src/app/globals.css`.
+- Tokens, typography and component styles: `src/app/tokens.css` (semantic tokens: what a colour is
+  *for*) and `src/app/globals.css` (the raw palette and the shared components).
 - Motion: `src/lib/motion/` (capability tiers, reduced motion, activity suspension) and
   `src/components/motion/` (the runtime, primitives such as `Reveal`, and the page scenes).
   Content on the first screen must never wait on a reveal.
+- Dark theme: the site follows the visitor's device setting and nothing else. There is no theme
+  toggle and no saved choice, so the site still stores nothing in the browser (the Cookie notice
+  says so, and `tests/theme.test.mjs` checks that the theme code cannot use browser storage). Set
+  `NEXT_PUBLIC_THEME_TOGGLE=0` at build time to switch the dark theme off. `tests/theme.test.mjs` also
+  checks every text and background token pair against WCAG AA in both themes.
+- Smooth scrolling (Lenis): only for a mouse or trackpad on the full and standard motion tiers, never
+  for touch, reduced motion or Save-Data, and precision-touchpad scrolling is left to the browser.
+  Set `NEXT_PUBLIC_SMOOTH_SCROLL=0` at build time to remove it, or add `?smooth=0` to a URL to turn it
+  off for that visit (nothing is remembered).
+- Page transitions use React's `ViewTransition` (React 19.3, so `react` and `react-dom` are pinned to
+  exactly `19.3.0`) and degrade to an instant navigation without the browser API or under reduced
+  motion.
 
 ## Content
 
 The FAQ page and its categories come from `src/lib/faqs.ts`; native accordions work without
-JavaScript. Privacy, Cookies, Website Terms and Safeguarding pages describe the current marketing
-and enquiry website, and each states its own review date. Outstanding company decisions and the
-authoritative guidance consulted are recorded in `LEGAL_REVIEW.md`.
+JavaScript. Privacy, Cookies, Website Terms, Tuition Terms, Safeguarding, Complaints and
+Accessibility pages describe the current marketing and enquiry website, each states its own review
+date, and `/trust` links to all of them in one place (it makes no claim of its own). Outstanding
+company decisions and the authoritative guidance consulted are recorded in `LEGAL_REVIEW.md`.
+
+Every public route is listed in `src/app/sitemap.ts` and has a preview card in `src/lib/ogPages.ts`
+(served from `/og/...`); `tests/site.test.mjs` fails if a page folder is missing from either.
 
 The old public tutor URLs permanently redirect to About. The separate external Tutor login
 remains available in the footer.
