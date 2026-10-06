@@ -46,9 +46,8 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  icons: {
-    icon: "/favicon.svg",
-  },
+  // Icons come from the file conventions in this folder (icon.svg, favicon.ico, apple-icon.png), all
+  // generated from the vector mark.
 };
 
 export const viewport: Viewport = {
