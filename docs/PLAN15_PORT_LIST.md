@@ -1,8 +1,9 @@
 # What to port from the friend's Software changes
 
 > **Status (6 October 2026): done.** This was the plan. What was actually built, where it differs, and the
-> evidence are in `docs/PLAN15_PORT_COMPLETION.md`. The command palette (3.9) and the bare-domain redirect (4.1)
-> were left out on purpose, and the storage-dependent items (decision 2) are still open.
+> evidence are in `docs/PLAN15_PORT_COMPLETION.md`. Since this list was written the owner decided to remember
+> theme and motion choices and to add the command palette (3.9), so both are built. Only the bare-domain redirect
+> (4.1) was left out on purpose.
 
 **Source.** `LearnThriveSoftware` `main` at `3cd2544`: 27 commits by Alvi Hossain between 1 and 5 October,
 236 files, on top of `b5e6827` (the commit the first design port was taken from). The friend's own

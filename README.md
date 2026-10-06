@@ -110,11 +110,22 @@ left out, and `docs/DESIGN_PORT_COMPLETION.md` records the port itself.
 - Motion: `src/lib/motion/` (capability tiers, reduced motion, activity suspension) and
   `src/components/motion/` (the runtime, primitives such as `Reveal`, and the page scenes).
   Content on the first screen must never wait on a reveal.
-- Dark theme: the site follows the visitor's device setting and nothing else. There is no theme
-  toggle and no saved choice, so the site still stores nothing in the browser (the Cookie notice
-  says so, and `tests/theme.test.mjs` checks that the theme code cannot use browser storage). Set
-  `NEXT_PUBLIC_THEME_TOGGLE=0` at build time to switch the dark theme off. `tests/theme.test.mjs` also
-  checks every text and background token pair against WCAG AA in both themes.
+- Dark theme and motion: the site follows the visitor's device by default. A visitor can also choose
+  System, Light or Dark (the icon button in the header, or the Appearance control in the footer) and
+  System or Reduce for motion (the footer, or the site search). Those choices are remembered in the
+  visitor's own browser: `lt-theme` and `lt-motion` in local storage, written only when a choice is made
+  and removed when System is chosen again, and applied before first paint by a small script in
+  `src/app/layout.tsx` so there is no flash. The site sets no cookies. Set `NEXT_PUBLIC_THEME_TOGGLE=0` at
+  build time to switch the dark theme and its controls off. `tests/theme.test.mjs` checks every text and
+  background token pair against WCAG AA in both themes.
+- Browser storage is a short, reviewable list: `tests/storage.test.mjs` fails if any other file touches it,
+  if anything sets a cookie, or if the Cookie notice (`src/app/cookies/page.tsx`) stops naming each key.
+  Add a new use only after updating that notice and `LEGAL_REVIEW.md`.
+- Site search (Ctrl or Cmd + K, `/`, or the header's search button): `src/components/palette/` and
+  `src/lib/palette/`. `PaletteHost` is tiny and always loaded; the palette and its page, subject and FAQ
+  list are a separate chunk fetched when someone shows intent to use it. Its "recent" list lives in session
+  storage and is gone when the tab closes. To add a page to the search, add it to
+  `src/lib/palette/publicCommands.ts`.
 - Smooth scrolling (Lenis): only for a mouse or trackpad on the full and standard motion tiers, never
   for touch, reduced motion or Save-Data, and precision-touchpad scrolling is left to the browser.
   Set `NEXT_PUBLIC_SMOOTH_SCROLL=0` at build time to remove it, or add `?smooth=0` to a URL to turn it

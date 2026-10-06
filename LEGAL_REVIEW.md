@@ -39,24 +39,26 @@ Outstanding factual qualifications:
 
 - The identity of the controller and its contact/service address are missing because the business identity is unverified. “LearnThrive Tuition” alone may be insufficient once the operator is confirmed.
 - Provider categories, retention principles, lawful bases, transfer wording, and safeguarding disclosure language cannot be final until the data map and responsibilities above are approved.
-- The source and local production-browser checks found no cookies, local/session storage or third-party requests. This does not verify the live hosting/CDN configuration. Audit response headers, deployed scripts, consent-exempt storage, and third-party requests on the live domain before publication and after each hosting or feature change.
+- The source and local production-browser checks found no cookies or third-party requests, and browser storage only after a visitor chooses a theme or motion setting or opens a search result (see "Added by the Plan 15 design port" below). This does not verify the live hosting/CDN configuration. Audit response headers, deployed scripts, consent-exempt storage, and third-party requests on the live domain before publication and after each hosting or feature change.
 - Re-check both notices before adding analytics, pixels, embeds, chat, booking, payment, CRM, portals, video platforms, or recording. Non-essential storage/access must not run before any required consent or other control is implemented.
 - The shared legal-page component displays **10 September 2026** as its last-reviewed date. This is an editorial review date, not evidence of company or professional legal approval.
 
 ## Added by the Plan 15 design port (6 October 2026)
 
 The port brought four public pages across from the LearnThriveSoftware project. Their text is that
-project's, carried over word for word; **nobody on this project has reviewed their wording against
-LearnThrive Tuition's real practice**, and each shows a review date of 28 September 2026 that is the
-date it was written there, not evidence of approval here.
+project's, carried over word for word, and each shows a review date of 28 September 2026 that is the
+date it was written there. **The owner confirmed two of their commitments on 6 October 2026 (below);
+nobody has reviewed the rest of the wording against LearnThrive Tuition's real practice.**
 
 - **`/complaints`** promises to acknowledge a complaint within **2 working days** and answer within
-  **10 working days**, and says LearnThrive will review an unresolved complaint again. Confirm those
-  are commitments the business will keep, or change them (`src/app/complaints/page.tsx`). It also lists
-  "billing" as a complaint topic: confirm that fits how tuition is actually invoiced.
+  **10 working days**, and says LearnThrive will review an unresolved complaint again.
+  **Confirmed by the owner on 6 October 2026** as commitments the business will keep
+  (`src/app/complaints/page.tsx`). It also lists "billing" as a complaint topic: still worth checking that
+  fits how tuition is actually invoiced.
 - **`/accessibility`** says the site **aims to meet WCAG 2.2 AA** and invites reports by email or phone.
-  The automated checks in this repository (axe-core on every page, light and dark) find no serious
-  failures, but that is not a full accessibility audit; keep the wording an aim, not a claim.
+  **The owner confirmed that aim on 6 October 2026.** The automated checks in this repository (axe-core on
+  every page, light and dark) find no serious failures, but that is not a full accessibility audit; keep the
+  wording an aim, not a claim.
 - **`/tuition-terms`** says the terms for lessons (price, payment, scheduling, rescheduling,
   cancellation, ending the arrangement) are confirmed with each family **in writing before tuition
   begins**. This does not replace decision 6 above; it only explains that none are published yet.
@@ -66,11 +68,34 @@ date it was written there, not evidence of approval here.
 - **Unchanged and still open:** the DBS/vetting wording elsewhere on the site (decision 8). The port
   did not touch it.
 
-**Browser storage.** The port deliberately keeps this site storage-free. The dark theme follows the
-visitor's device setting; there is no theme or motion control, nothing is saved, and the mobile
-"Book a free consultation" bar keeps its dismissal in memory only. The Cookie notice therefore needed no
-change and still says what is true. If a saved theme or motion preference is ever wanted, the notice and
-this review must be updated first (see `docs/PLAN15_PORT_COMPLETION.md`, open decision 2).
+**Browser storage (owner decision, 6 October 2026).** The owner decided that a visitor's theme and motion
+choices should be remembered, and that the site search should be added. The site sets **no cookies**. It
+now keeps these things in the visitor's own browser, each only because of something the visitor does, and
+none is sent to LearnThrive or anyone else:
+
+| Key | Where | Written when | Cleared |
+|---|---|---|---|
+| `lt-theme` (`light` or `dark`) | local storage | the visitor picks Light or Dark with the theme control or the search | choosing System removes it |
+| `lt-motion` (`reduce`) | local storage | the visitor picks Reduce with the motion control or the search | choosing System removes it |
+| `lt-palette-public:recent` (page ids) | session storage | the visitor opens a result from the site search | when the tab closes |
+
+Browsing alone stores nothing; `tests/storage.test.mjs` fails if any other file starts using browser
+storage, if anything sets a cookie, or if the Cookie notice stops naming these keys. The pre-paint script in
+`src/app/layout.tsx` only reads them. The mobile "Book a free consultation" bar still keeps its dismissal in
+memory only, and `?smooth=0` is not remembered.
+
+**Still for you and a legal reviewer:** (1) the Cookie notice (`src/app/cookies/page.tsx`) now carries the
+Software project's wording for this, and its "last reviewed" date was left at **10 September 2026** on
+purpose: change it once someone has read the new wording, so the page does not claim a review that has not
+happened; (2) whether remembering a visitor's appearance choice needs consent under PECR is a legal
+question this project has not answered. The site shows no consent banner, on the basis that the storage
+exists only because the visitor used the control.
+
+**Site search.** The Ctrl/Cmd+K search lists the site's own pages, subjects, FAQ questions, the
+contact options and the appearance commands. It adds no new wording to any page. The DBS and vetting
+wording was not touched (decision 8): the search deliberately has no "DBS" or "vetting" keywords, so
+searching for those words currently finds nothing (it matches page and question titles, not their text).
+The Safeguarding page is still found by "safeguarding", "welfare" or "child protection".
 
 **Security headers.** Production pages now send a Content-Security-Policy, HSTS for this host (not
 `includeSubDomains` or `preload`) and `Cross-Origin-Opener-Policy`; see the README. Re-audit the live
