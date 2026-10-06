@@ -28,7 +28,11 @@ const primaryRoutes = [
   "/privacy",
   "/cookies",
   "/terms",
+  "/tuition-terms",
   "/safeguarding",
+  "/trust",
+  "/complaints",
+  "/accessibility",
 ];
 const viewports = [
   { name: "mobile-360", width: 360, height: 800 },
@@ -170,6 +174,13 @@ async function run() {
       const response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
       assert.equal(response?.status(), 200, `${route} should return 200`);
       assert.equal(response?.headers()["set-cookie"], undefined, `${route} unexpectedly sets a cookie`);
+      // The production build serves the security headers (src/lib/securityHeaders.ts). The whole run
+      // below happens under that enforced policy, so a script, style, image or font it blocked would
+      // surface as a console error and fail this check.
+      const responseHeaders = response?.headers() ?? {};
+      assert.match(responseHeaders["content-security-policy"] ?? "", /default-src 'self'/, `${route} needs its CSP`);
+      assert.match(responseHeaders["strict-transport-security"] ?? "", /max-age=\d+/, `${route} needs HSTS`);
+      assert.equal(responseHeaders["cross-origin-opener-policy"], "same-origin", `${route} needs COOP`);
       await page.locator("main h1").waitFor({ state: "visible" });
 
       const metadata = await page.evaluate(() => ({
@@ -296,7 +307,10 @@ async function run() {
     const firstSummary = firstFaq.locator("summary");
     await firstSummary.focus();
     await page.keyboard.press("Enter");
-    assert.ok(await firstFaq.locator(".faq-item__answer").isVisible(), "Enter should reveal an FAQ answer");
+    // The answer opens with a short height transition (globals.css, ::details-content), so on the very
+    // first frame it has no size yet: wait for it to appear rather than asserting on that frame.
+    assert.notEqual(await firstFaq.getAttribute("open"), null, "Enter should open the FAQ item");
+    await firstFaq.locator(".faq-item__answer").waitFor({ state: "visible", timeout: 3000 });
     assert.ok(
       await firstSummary.evaluate((element) => getComputedStyle(element).outlineStyle !== "none"),
       "Keyboard focus on the FAQ must remain visible",
@@ -325,10 +339,12 @@ async function run() {
     const noJsPage = await noJsContext.newPage();
     await noJsPage.goto(`${baseUrl}/faq`, { waitUntil: "domcontentloaded" });
     await noJsPage.locator("main details summary").first().click();
-    assert.ok(
-      await noJsPage.locator("main details .faq-item__answer").first().isVisible(),
-      "FAQ should remain usable with JavaScript disabled",
-    );
+    // Native <details> opens without any script; its answer then expands over a short transition.
+    await noJsPage
+      .locator("main details .faq-item__answer")
+      .first()
+      .waitFor({ state: "visible", timeout: 3000 })
+      .catch(() => assert.fail("FAQ should remain usable with JavaScript disabled"));
     await noJsPage.goto(`${baseUrl}/about`, { waitUntil: "domcontentloaded" });
     for (const name of ["Abdurrahman Mustafa", "Tahasin Hasan"]) {
       assert.ok(
@@ -414,6 +430,9 @@ async function run() {
       await Promise.all(element.getAnimations().map((animation) => animation.finished));
     });
     assert.ok(await page.getByRole("navigation", { name: "Main navigation" }).isVisible());
+    // The home hero's staggered entrance can still be running behind the open menu; audit the settled
+    // page, not a half-faded frame (axe blends transient opacity into the colour contrast).
+    await finishAnimations(page);
     assert.deepEqual(
       await auditA11y(page),
       [],
@@ -495,10 +514,17 @@ async function run() {
     assert.equal(enquiryRequests.length, 1, "A valid form sends exactly one request");
     assert.deepEqual(
       Object.keys(enquiryRequests[0]).sort(),
-      ["contactMethod", "email", "parentName", "phone", "subject", "support", "yearGroup"],
+      ["contactMethod", "elapsedMs", "email", "parentName", "phone", "subject", "support", "website", "yearGroup"],
       "The enquiry payload must match what the API validates",
     );
     assert.equal(enquiryRequests[0].contactMethod, "Phone");
+    // The two abuse-protection fields (route.ts): the honeypot a person never fills, and how long the
+    // form was open, which is a real elapsed time and not a placeholder.
+    assert.equal(enquiryRequests[0].website, "", "The honeypot must be empty for a real visitor");
+    assert.ok(
+      Number.isFinite(enquiryRequests[0].elapsedMs) && enquiryRequests[0].elapsedMs > 0,
+      "The form must report how long it was open",
+    );
     assert.match(await sent.innerText(), /Your enquiry has been sent/i);
     assert.doesNotMatch(
       await page.locator("main").innerText(),

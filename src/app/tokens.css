@@ -173,13 +173,15 @@
 
    Two selectors carry the identical block, because CSS cannot share one declaration list between
    a media query and an attribute selector:
-     1. System (the default): the OS says dark and the visitor has not chosen Light.
-     2. Explicit: html[data-theme="dark"], set by the pre-paint script before first paint.
+     1. System (the one this site uses): the device is set to dark.
+     2. Explicit: html[data-theme="dark"]. Nothing on this site sets it: there is no theme toggle and
+        no saved choice, so no browser storage is involved. It is kept so the two projects' token
+        files stay line-for-line comparable, and so a test or screenshot can force the dark theme.
    tests/theme.test.mjs fails if the two blocks ever differ.
 
-   Both are gated on html[data-themes="on"], which layout.tsx sets from NEXT_PUBLIC_THEME_TOGGLE,
-   so the whole theme can be switched off at build time (a kill switch) and, until the toggle was
-   shipped, nothing was half-dark. With the attribute absent the site is light, exactly as before.
+   Both are gated on html[data-themes="on"], which layout.tsx sets from NEXT_PUBLIC_THEME_TOGGLE
+   (any value but "0" leaves it on), so the whole theme can be switched off at build time. With the
+   attribute absent the site is light, whatever the device says.
    ═══════════════════════════════════════════════════════════════════════════════════════════ */
 
 @media screen and (prefers-color-scheme: dark) {

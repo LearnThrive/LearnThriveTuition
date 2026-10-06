@@ -27,9 +27,15 @@
 }
 
 /* Opacity only (the compositor-first rule, tests/compositor.test.mjs): a word at partial opacity
-   over the page reads as the muted tone of the same ink, and rises to the full strong tone. */
+   over the page reads as the muted tone of the same ink, and rises to the full strong tone.
+
+   The muted state is 0.56, not the 0.42 the Software project uses. The statement is large text
+   (28px to 52px, weight 800), which needs 3:1, and a word is at this opacity whenever the statement
+   has not yet scrolled into focus. At 0.42 the ink blends to 2.4:1 on the cream section (axe flags it
+   in scripts/browser-check.mjs); at 0.56 the worst case across every surface it can sit on, in both
+   themes, is 3.4:1, so the words stay readable at every scroll position, not only once lit. */
 @keyframes scrub-word {
   from {
-    opacity: 0.42;
+    opacity: 0.56;
   }
 }
