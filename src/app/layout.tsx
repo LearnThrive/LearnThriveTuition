@@ -2,12 +2,22 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import type { ReactNode } from "react";
 import { Bricolage_Grotesque, Public_Sans, IBM_Plex_Mono } from "next/font/google";
-import { MotionDebugOverlay } from "@/components/motion/MotionDebugOverlay";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
+import { MobileEnquiryBar } from "@/components/MobileEnquiryBar";
+import { MotionDebugGate } from "@/components/motion/MotionDebugGate";
 import { MotionRuntime } from "@/components/motion/MotionRuntime";
+import { PageTransition } from "@/components/motion/PageTransition";
+import { SmoothScroll } from "@/components/motion/SmoothScroll";
+import { SpotlightPointer } from "@/components/motion/SpotlightPointer";
+import { NavigationProgress } from "@/components/NavigationProgress";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { siteConfig } from "@/lib/site";
+import { THEME_COLOURS, THEMES_ENABLED } from "@/lib/theme";
+import { webSiteData } from "@/lib/structuredData";
 import "./globals.css";
+import "./tokens.css";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -53,7 +63,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0e2a47",
+  // One theme-color per scheme: the browser's own chrome follows the device scheme. Without the themes
+  // flag there is only the light site, so only the light colour.
+  themeColor: THEMES_ENABLED
+    ? [
+        { media: "(prefers-color-scheme: light)", color: THEME_COLOURS.light },
+        { media: "(prefers-color-scheme: dark)", color: THEME_COLOURS.dark },
+      ]
+    : THEME_COLOURS.light,
+  // Lets the browser paint native UI (scrollbars, form controls, the canvas behind the page) in the
+  // visitor's scheme from the first byte, before any stylesheet loads.
+  colorScheme: THEMES_ENABLED ? "light dark" : "light",
 };
 
 const organisationData = {
@@ -61,7 +81,7 @@ const organisationData = {
   "@type": "EducationalOrganization",
   name: siteConfig.name,
   url: siteConfig.url,
-  logo: `${siteConfig.url}/brand/learnthrive-logo.png`,
+  logo: `${siteConfig.url}/icons/icon-512.png`,
   description: siteConfig.description,
   email: siteConfig.email,
   telephone: siteConfig.phoneContacts.map((contact) => contact.phoneHref),
@@ -84,6 +104,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html
       lang="en-GB"
       data-scroll-behavior="smooth"
+      data-themes={THEMES_ENABLED ? "on" : undefined}
       className={`${bricolage.variable} ${publicSans.variable} ${ibmPlexMono.variable}`}
     >
       <body>
@@ -101,16 +122,28 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         {/* The one Motion runtime for the whole site (LazyMotion + MotionConfig). It wraps the
             pages without making them client-rendered — see MotionRuntime.tsx. */}
         <MotionRuntime>
+          {/* A slim branded progress bar for navigations that take longer than ~150ms. */}
+          <NavigationProgress />
           <a className="skip-link" href="#main-content">
             Skip to main content
           </a>
+          <AnnouncementBar />
           <SiteHeader />
-          <main id="main-content">{children}</main>
+          <main id="main-content">
+            <PageTransition>{children}</PageTransition>
+          </main>
           <SiteFooter />
+          {/* Phones: a dismissible "Book a free consultation" bar after the first screen. */}
+          <MobileEnquiryBar />
+          {/* Smooth scrolling (full/standard tier, fine pointer only; see the component). */}
+          <SmoothScroll />
+          {/* One delegated pointer listener for every [data-spotlight] card (full tier, fine pointer). */}
+          <SpotlightPointer />
           {/* Renders nothing unless `?motionDebug=1` is present in a development build (or a build
               made with NEXT_PUBLIC_MOTION_DEBUG=1) — see lib/motion/debug.ts. */}
-          <MotionDebugOverlay />
+          <MotionDebugGate />
         </MotionRuntime>
+        <JsonLd data={webSiteData()} />
         <Script
           id="learnthrive-organisation-data"
           type="application/ld+json"

@@ -5,9 +5,12 @@ import { PhoneContacts } from "@/components/PhoneContacts";
 import { Reveal } from "@/components/motion/primitives/Reveal";
 import { CinematicBackdrop } from "@/components/motion/primitives/CinematicBackdrop";
 import { LegalContentsNav } from "@/components/motion/scenes/LegalPageMotion";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { siteConfig } from "@/lib/site";
 
 export interface LegalPageProps {
+  /** The page's own path, for its BreadcrumbList structured data. */
+  path: `/${string}`;
   eyebrow: string;
   title: string;
   intro: string;
@@ -24,6 +27,7 @@ export interface LegalPageProps {
 }
 
 export function LegalPage({
+  path,
   eyebrow,
   title,
   intro,
@@ -37,6 +41,7 @@ export function LegalPage({
         eyebrow={eyebrow}
         title={title}
         intro={intro}
+        breadcrumb={<Breadcrumbs trail={[{ name: title, path }]} />}
         className="page-hero--legal"
         backdrop={
           <CinematicBackdrop
