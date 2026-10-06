@@ -30,8 +30,9 @@ test("it never runs on light or reduced tiers, touch, Save-Data, or when switche
 });
 
 test("nothing about smooth scrolling is kept in browser storage", () => {
-  // This site stores nothing in the browser (the cookie notice says so), so the `?smooth=0` switch
-  // lasts for the visit and is not remembered.
+  // The cookie notice lists exactly what this site stores (tests/storage.test.mjs keeps that list
+  // honest), and this debugging switch is not on it, so `?smooth=0` lasts for the visit and is not
+  // remembered.
   for (const file of ["../src/lib/motion/smoothScroll.ts", "../src/components/motion/SmoothScroll.tsx"]) {
     const source = readFileSync(new URL(file, import.meta.url), "utf8");
     assert.doesNotMatch(source, /sessionStorage|localStorage|document.cookie|indexedDB/, file);

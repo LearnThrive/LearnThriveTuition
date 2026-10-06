@@ -139,15 +139,22 @@ for (const theme of ["light", "dark"]) {
   });
 }
 
-// ── This site keeps nothing in the browser ───────────────────────────────────────────────────────────
+// ── A saved choice is the only thing the theme code stores ───────────────────────────────────────────
 
-test("the dark theme follows the device: no theme toggle, no saved choice, no browser storage", () => {
+test("the theme choice is written only by setTheme, only to local storage, and never as a cookie", () => {
   const theme = readFileSync(new URL("../src/lib/theme.ts", import.meta.url), "utf8");
-  for (const storage of ["localStorage", "sessionStorage", "document.cookie", "indexedDB"]) {
-    assert.ok(!theme.includes(storage), `theme.ts must not use ${storage}`);
+  assert.equal(theme.split("localStorage.setItem(").length - 1, 1, "exactly one write");
+  const setTheme = theme.slice(theme.indexOf("export function setTheme"), theme.indexOf("export function applyTheme"));
+  assert.ok(setTheme.includes("localStorage.setItem(THEME_STORAGE_KEY, choice)"), "the write is inside setTheme");
+  for (const other of ["sessionStorage", "document.cookie", "indexedDB"]) {
+    assert.ok(!theme.includes(other), "theme.ts must not use " + other);
   }
-  assert.ok(!theme.includes("THEME_INIT_SCRIPT"), "there is no pre-paint script to restore a saved choice");
+  assert.ok(theme.includes('THEME_STORAGE_KEY = "lt-theme"'), "the key the cookie notice names");
+});
+
+test("the root layout applies a saved choice before first paint with one fixed script, and nothing else", () => {
   const layout = readFileSync(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
-  assert.ok(layout.includes('data-themes={THEMES_ENABLED ? "on" : undefined}'), "the themes flag is the only switch");
-  assert.ok(!layout.includes("THEME_INIT_SCRIPT"), "layout.tsx must not inject a pre-paint theme script");
+  assert.ok(layout.includes("dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}"), "the pre-paint script is injected");
+  assert.ok(layout.includes("suppressHydrationWarning"), "html tolerates the attribute the script sets");
+  assert.ok(layout.includes('data-themes={THEMES_ENABLED ? "on" : undefined}'), "the themes flag is the kill switch");
 });

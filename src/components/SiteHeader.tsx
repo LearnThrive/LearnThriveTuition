@@ -7,7 +7,9 @@ import { useMotionValueEvent, useScroll } from "framer-motion";
 import { Brand } from "@/components/Brand";
 import { ButtonLink } from "@/components/ButtonLink";
 import { Container } from "@/components/Container";
+import { PaletteTrigger } from "@/components/palette/PaletteTrigger";
 import { SubjectsFlyout } from "@/components/SubjectsFlyout";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { navigation } from "@/lib/site";
 
 export function SiteHeader() {
@@ -155,6 +157,10 @@ export function SiteHeader() {
               );
             })}
           </nav>
+          <div className="header-tools">
+            <PaletteTrigger className="header-icon-button" />
+            <ThemeToggle variant="cycle" className="header-theme" />
+          </div>
           <ButtonLink href="/book" className="header-cta">
             Book a free consultation
           </ButtonLink>

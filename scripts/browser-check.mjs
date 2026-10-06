@@ -592,6 +592,89 @@ async function run() {
     }
     await bareContext.close();
 
+    // ── Saved choices and the site search ─────────────────────────────────────────────────────────────
+    // A fresh context, so this cannot disturb the "nothing is stored after the enquiry flow" check below.
+    {
+      const choiceContext = await browser.newContext({ locale: "en-GB", viewport: { width: 1440, height: 1000 } });
+      const choicePage = await choiceContext.newPage();
+      choicePage.on("console", (message) => {
+        if (message.type() === "error") consoleErrors.push(`${choicePage.url()}: ${message.text()}`);
+      });
+      choicePage.on("pageerror", (error) => pageErrors.push(`${choicePage.url()}: ${error.message}`));
+      const stored = () =>
+        choicePage.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage }, cookie: document.cookie }));
+      const attribute = (name) => choicePage.evaluate((attr) => document.documentElement.getAttribute(attr), name);
+
+      await choicePage.goto(`${baseUrl}/about`, { waitUntil: "domcontentloaded" });
+      await choicePage.locator("main h1").waitFor({ state: "visible" });
+      assert.deepEqual(await stored(), { local: {}, session: {}, cookie: "" }, "Browsing alone must store nothing");
+
+      // Theme: System -> Light -> Dark, remembered, and applied before first paint after a reload.
+      await choicePage.getByRole("button", { name: /Colour theme: System/ }).click();
+      await choicePage.getByRole("button", { name: /Colour theme: Light/ }).click();
+      assert.equal(await attribute("data-theme"), "dark", "Two presses of the theme control should reach Dark");
+      assert.deepEqual((await stored()).local, { "lt-theme": "dark" }, "Only the theme choice may be stored");
+      await choicePage.reload({ waitUntil: "domcontentloaded" });
+      assert.equal(await attribute("data-theme"), "dark", "The saved theme must be applied before first paint");
+      assert.equal(
+        await choicePage.evaluate(() => getComputedStyle(document.body).backgroundColor),
+        "rgb(10, 26, 43)",
+        "The saved Dark theme must be what is painted",
+      );
+      await choicePage.locator("main h1").waitFor({ state: "visible" });
+      await settleReveals(choicePage);
+      assert.deepEqual(await auditA11y(choicePage), [], "The saved dark theme has serious axe violations");
+
+      // Motion: Reduce is remembered too, and switches the whole site to its reduced tier.
+      await choicePage.locator("footer label", { hasText: "Reduce" }).click();
+      assert.equal(await attribute("data-motion"), "reduce");
+      assert.deepEqual((await stored()).local, { "lt-theme": "dark", "lt-motion": "reduce" });
+      await choicePage.reload({ waitUntil: "domcontentloaded" });
+      assert.equal(await attribute("data-motion"), "reduce", "The saved motion choice must be applied before first paint");
+      await choicePage
+        .waitForFunction(() => document.documentElement.getAttribute("data-motion-tier") === "reduced", undefined, { timeout: 5000 })
+        .catch(() => assert.fail("A saved Reduce choice must put the site on its reduced motion tier"));
+
+      // Back to the device's settings: choosing System removes what was saved.
+      await choicePage.getByRole("button", { name: /Colour theme: Dark/ }).click();
+      await choicePage
+        .locator("fieldset", { hasText: "Motion" })
+        .locator("label", { hasText: "System" })
+        .click();
+      assert.deepEqual((await stored()).local, {}, "Choosing System must leave nothing saved");
+
+      // The site search: shortcut, button, a result, Escape, and only a session-scoped recent list.
+      const palette = choicePage.getByRole("dialog", { name: "Search LearnThrive" });
+      await choicePage.keyboard.press("Control+k");
+      await palette.waitFor({ state: "visible", timeout: 8000 });
+      await choicePage.getByRole("combobox", { name: "Search LearnThrive" }).fill("complaints");
+      await choicePage.getByRole("option", { name: /^Complaints/ }).first().waitFor({ state: "visible" });
+      await choicePage.keyboard.press("Enter");
+      await choicePage.waitForURL(`${baseUrl}/complaints`);
+      await palette.waitFor({ state: "hidden" });
+      const afterSearch = await stored();
+      assert.deepEqual(afterSearch.local, {}, "The search must not write to local storage");
+      assert.deepEqual(Object.keys(afterSearch.session), ["lt-palette-public:recent"], "Only the session recent list may be stored");
+      assert.equal(afterSearch.cookie, "");
+
+      const searchButton = choicePage.getByRole("button", { name: "Search the site" });
+      await searchButton.click();
+      await palette.waitFor({ state: "visible" });
+      await choicePage.getByRole("combobox", { name: "Search LearnThrive" }).fill("maths");
+      await choicePage.getByRole("option").first().waitFor({ state: "visible" });
+      await finishAnimations(choicePage);
+      assert.deepEqual(await auditA11y(choicePage), [], "The open site search has serious axe violations");
+      await choicePage.keyboard.press("Escape");
+      await palette.waitFor({ state: "hidden" });
+      assert.equal(
+        await choicePage.evaluate(() => document.activeElement?.hasAttribute("data-palette-trigger")),
+        true,
+        "Closing the search must return focus to the button that opened it",
+      );
+      assert.deepEqual(await choiceContext.cookies(), [], "Choices and search must never set a cookie");
+      await choiceContext.close();
+    }
+
     assert.deepEqual(await context.cookies(), [], "The application unexpectedly set cookies");
     assert.deepEqual(
       await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length })),

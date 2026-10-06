@@ -749,6 +749,25 @@ img[src*="%2Fimages%2F"] {
   transform: scale(0.94);
 }
 
+.header-theme {
+  flex: none;
+}
+
+/* The Search and appearance buttons travel together. On desktop the wrapper adds no box (the header lays
+   the buttons out exactly as if it were not there); in the phone menu it keeps them side by side in one
+   row under the links, instead of one button per row. */
+.header-tools {
+  display: contents;
+}
+
+@media (max-width: 59rem) {
+  .header-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
 .header-cta {
   min-height: 2.8rem;
   padding: 0.65rem 1rem;
@@ -4739,4 +4758,126 @@ html[data-motion="reduce"] .testimonial-card:hover {
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 0.2em;
+}
+
+/* ── Dialog base (the command palette, components/palette/CommandPalette.tsx) ─────────────────────────
+   The Software project keeps its dialog in the signed-in app's stylesheets. This is the small part the
+   public site uses, written with this site's tokens: a fixed layer, a scrim, a panel, and the round close
+   button. The palette adds its own look in CommandPalette.module.css. */
+body.has-dialog {
+  overflow: hidden;
+}
+
+.dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.dialog__scrim {
+  /* A static, mild blur behind a modal: painted once while the dialog is open, never animated. */
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: var(--overlay);
+  cursor: pointer;
+  animation: dialog-scrim-in var(--duration-medium) var(--ease-snappy);
+}
+
+.dialog.is-closing .dialog__scrim {
+  animation: dialog-scrim-out var(--duration-fast) var(--ease-snappy) forwards;
+}
+
+.dialog__panel {
+  position: relative;
+  z-index: 1;
+  width: min(34rem, 100%);
+  max-height: min(85vh, 48rem);
+  overflow-y: auto;
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-5);
+  animation: dialog-in var(--duration-medium) var(--ease-gentle);
+}
+
+.dialog__panel.is-closing {
+  animation: dialog-out var(--duration-fast) var(--ease-snappy) forwards;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dialog-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+}
+
+@keyframes dialog-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-scrim-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog__scrim,
+  .dialog__panel {
+    animation: none;
+  }
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-strong);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-snappy),
+    border-color var(--duration-fast) var(--ease-snappy),
+    transform var(--duration-instant) var(--ease-snappy);
+}
+
+.icon-button:hover {
+  background: var(--surface-sunken);
+  border-color: var(--border-subtle);
+}
+
+.icon-button:active {
+  transform: scale(0.92);
 }

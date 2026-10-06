@@ -1,18 +1,22 @@
 /**
- * The visitor's motion preference: System (follow the device, the default) or Reduce.
+ * The visitor's own motion preference (plan15 Wave 11, feature A3): System (follow the device, the
+ * default) or Reduce.
  *
- * REDUCE ALWAYS WINS. A "Reduce" choice is a second way to switch on exactly what `prefers-reduced-motion`
+ * REDUCE ALWAYS WINS. It is a second, user-chosen way to switch on exactly what `prefers-reduced-motion`
  * switches on: the capability store reports the "reduced" tier, Motion is told to skip spatial animation,
- * and the blanket CSS rule in globals.css applies under `html[data-motion="reduce"]`. There is no "full
- * motion" choice that overrides a device reduced-motion setting.
+ * and the blanket CSS rule in globals.css applies under `html[data-motion="reduce"]`. There is
+ * deliberately no "full motion" choice that overrides an operating-system reduced-motion setting: a
+ * visitor whose device says "reduce" is never made to see motion by this site. (Considered and not built;
+ * recorded in docs/PLAN15_FEATURE_PROPOSALS.md.)
  *
- * This is the storage-free subset of the Software project's module. This site has no motion control and
- * nothing here reads or writes the browser's storage, so the preference is always "system" unless
- * something sets `html[data-motion="reduce"]` for the page view. A control that remembered the choice
- * would need the cookie notice and its legal review updated first (docs/PLAN15_PORT_LIST.md, D2); the
- * interface is kept so that one can be added without touching the files that read the preference.
+ * Mechanics mirror the theme (lib/theme.ts): the choice is stored in localStorage only when it is "reduce"
+ * ("system" removes the key), applied as `html[data-motion="reduce"]`, and re-applied before first paint by
+ * THEME_INIT_SCRIPT. At runtime the attribute is the source of truth, so the choice still applies for the
+ * rest of a page view when storage is blocked.
  */
 export type MotionPreference = "system" | "reduce";
+
+export const MOTION_STORAGE_KEY = "lt-motion";
 
 /** Dispatched on `window` after a change, so every control and the capability store re-read it. */
 export const MOTION_EVENT = "lt-motion-change";
@@ -23,14 +27,21 @@ export function isMotionPreference(value: unknown): value is MotionPreference {
   return value === "system" || value === "reduce";
 }
 
-/** The preference in force on this page right now (the `data-motion` attribute on <html>). */
-export function currentMotionPreference(
-  root: HTMLElement | undefined = typeof document === "undefined" ? undefined : document.documentElement,
-): MotionPreference {
+/** Reads the stored choice; anything missing, invalid or unreadable is "system". */
+export function readStoredMotionPreference(storage: Pick<Storage, "getItem"> | undefined): MotionPreference {
+  try {
+    return storage?.getItem(MOTION_STORAGE_KEY) === "reduce" ? "reduce" : "system";
+  } catch {
+    return "system";
+  }
+}
+
+/** The preference in force on this page right now (the attribute, which the init script and setters keep current). */
+export function currentMotionPreference(root: HTMLElement | undefined = typeof document === "undefined" ? undefined : document.documentElement): MotionPreference {
   return root?.getAttribute("data-motion") === "reduce" ? "reduce" : "system";
 }
 
-/** True when Reduce is in force for this page view. (The device setting is read separately, by matchMedia.) */
+/** True when the visitor chose Reduce on this site. (The OS setting is read separately, by matchMedia.) */
 export function userPrefersReducedMotion(): boolean {
   return currentMotionPreference() === "reduce";
 }
@@ -40,8 +51,29 @@ export function applyMotionPreference(pref: MotionPreference, root: HTMLElement 
   else root.removeAttribute("data-motion");
 }
 
-/** For useSyncExternalStore: re-read when the preference changes on this page. */
+/** Writes the choice and applies it. Storage failures are swallowed: it still applies to this page view. */
+export function setMotionPreference(pref: MotionPreference, root: HTMLElement = document.documentElement) {
+  try {
+    if (pref === "reduce") window.localStorage.setItem(MOTION_STORAGE_KEY, "reduce");
+    else window.localStorage.removeItem(MOTION_STORAGE_KEY);
+  } catch {
+    /* private window or blocked storage: apply without persisting */
+  }
+  applyMotionPreference(pref, root);
+  window.dispatchEvent(new Event(MOTION_EVENT));
+}
+
+/** For useSyncExternalStore: re-read on our own event, and follow a change made in another tab. */
 export function subscribeMotionPreference(listener: () => void): () => void {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== MOTION_STORAGE_KEY && event.key !== null) return;
+    applyMotionPreference(readStoredMotionPreference(window.localStorage));
+    listener();
+  };
   window.addEventListener(MOTION_EVENT, listener);
-  return () => window.removeEventListener(MOTION_EVENT, listener);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(MOTION_EVENT, listener);
+    window.removeEventListener("storage", onStorage);
+  };
 }

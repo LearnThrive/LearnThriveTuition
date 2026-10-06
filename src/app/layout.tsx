@@ -10,11 +10,12 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { SpotlightPointer } from "@/components/motion/SpotlightPointer";
 import { NavigationProgress } from "@/components/NavigationProgress";
+import { PaletteHost } from "@/components/palette/PaletteHost";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { siteConfig } from "@/lib/site";
-import { THEME_COLOURS, THEMES_ENABLED } from "@/lib/theme";
+import { THEME_COLOURS, THEME_INIT_SCRIPT, THEMES_ENABLED } from "@/lib/theme";
 import { webSiteData } from "@/lib/structuredData";
 import "./globals.css";
 import "./tokens.css";
@@ -105,8 +106,17 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       lang="en-GB"
       data-scroll-behavior="smooth"
       data-themes={THEMES_ENABLED ? "on" : undefined}
+      // The init script below sets data-theme before React hydrates; React must keep what the DOM
+      // says rather than flag it (see node_modules/next/dist/docs/01-app/02-guides/
+      // preventing-flash-before-hydration.md). On <html> only.
+      suppressHydrationWarning
       className={`${bricolage.variable} ${publicSans.variable} ${ibmPlexMono.variable}`}
     >
+      {/* The pre-paint preference script: a saved theme choice (a no-op unless the themes are on) and a
+          saved motion choice. It reads the visitor's own browser storage and nothing else. */}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         {/* A reveal server-renders its content in its *start* state (Motion writes an inline
             `opacity: 0` and a transform), so a visitor whose JavaScript never runs — blocked,
@@ -139,6 +149,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           <SmoothScroll />
           {/* One delegated pointer listener for every [data-spotlight] card (full tier, fine pointer). */}
           <SpotlightPointer />
+          {/* The Ctrl/Cmd+K site search: a tiny host here, the palette itself a lazy chunk. */}
+          <PaletteHost />
           {/* Renders nothing unless `?motionDebug=1` is present in a development build (or a build
               made with NEXT_PUBLIC_MOTION_DEBUG=1) — see lib/motion/debug.ts. */}
           <MotionDebugGate />
