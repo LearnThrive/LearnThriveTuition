@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { buildSecurityHeaders } from "./src/lib/securityHeaders";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -9,21 +10,21 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/:path*",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), geolocation=(), microphone=()",
-          },
-        ],
+        headers: buildSecurityHeaders({
+          production: process.env.NODE_ENV === "production",
+          cspReportOnly: process.env.CSP_REPORT_ONLY === "1",
+        }),
+      },
+      // The API is never a search result.
+      {
+        source: "/api/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
     ];
   },
+  // No bare-domain to www redirect here, unlike the Software project: which host is the canonical one
+  // is a setting at the hosting provider, and a rule in code that disagrees with it makes a redirect
+  // loop. Pages declare the www host as canonical (metadata.ts) and the sitemap lists it.
   async redirects() {
     return [
       {

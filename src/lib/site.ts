@@ -727,3 +727,61 @@ export const enquiryGuidanceItems = [
   "Any current challenges or near-term goals",
   "Your preferred way to be contacted",
 ] as const;
+
+/**
+ * What the trust hub (/trust) links to. The descriptions are each linked page's own metadata
+ * description, word for word: the hub consolidates, it does not add claims.
+ */
+export const trustLinks = [
+  {
+    href: "/safeguarding",
+    label: "Safeguarding information",
+    text: "Student welfare, online tuition safety and routes for raising a safeguarding concern with LearnThrive Tuition or independent services.",
+  },
+  {
+    href: "/privacy",
+    label: "Privacy notice",
+    text: "How LearnThrive Tuition handles information provided through this website and related enquiries.",
+  },
+  {
+    href: "/cookies",
+    label: "Cookie notice",
+    text: "How the current LearnThrive Tuition website uses cookies and similar browser technologies.",
+  },
+  {
+    href: "/accessibility",
+    label: "Accessibility statement",
+    text: "LearnThrive Tuition's commitment to an accessible website, and how to report an accessibility issue.",
+  },
+  {
+    href: "/complaints",
+    label: "Complaints procedure",
+    text: "How to raise a complaint with LearnThrive Tuition and what happens after you do.",
+  },
+  {
+    href: "/terms",
+    label: "Website terms",
+    text: "Terms for using the LearnThrive Tuition public website and making an initial tuition enquiry.",
+  },
+  {
+    href: "/tuition-terms",
+    label: "Tuition terms",
+    text: "How LearnThrive Tuition's tuition service terms are agreed, separately from this website's own terms of use.",
+  },
+] as const;
+
+/**
+ * The site-wide announcement bar (plan15 Wave 10 section 14.2). OFF by default: `announcement` is `null`
+ * and nothing renders. To use it, replace `null` with an object, for example
+ * `{ text: "Half-term tuition places are open.", href: "/book", linkLabel: "Book a free consultation" }`,
+ * and rebuild. It shows above the header on every public page, is plain text plus one optional link, and
+ * is never written by the code: only the owner's own words go here.
+ */
+export interface Announcement {
+  text: string;
+  /** An optional link; both `href` and `linkLabel` are needed for it to render. */
+  href?: string;
+  linkLabel?: string;
+}
+
+export const announcement: Announcement | null = null;

@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbData } from "@/lib/structuredData";
+import { ViewTransition } from "react";
 import Image from "next/image";
+import { imageBlur } from "@/lib/imageBlur.generated";
+import { imageFocus } from "@/lib/imageFocus";
 import Link from "next/link";
 import { BodyClass } from "@/components/BodyClass";
 import { AnimatedUnderline } from "@/components/motion/primitives/AnimatedUnderline";
@@ -11,6 +16,7 @@ import { ElevenPlusMotif } from "@/components/motion/scenes/ElevenPlusMotif";
 import { Marquee } from "@/components/Marquee";
 import { createMetadata } from "@/lib/metadata";
 import styles from "./subjects.module.css";
+import { motionStagger, staggerDelay } from "@/lib/motion/tokens";
 
 export const metadata: Metadata = createMetadata({
   title: "Subjects We Cover",
@@ -145,6 +151,7 @@ export default function SubjectsPage() {
   return (
     <div className={styles.page}>
       <BodyClass className="is-subjects" />
+      <JsonLd data={breadcrumbData([{ name: "Subjects", path: "/subjects" }])} />
 
       {/* ── Hero ──────────────────────────────────────── */}
       <SubjectsHeroScene>
@@ -182,13 +189,13 @@ export default function SubjectsPage() {
         {/* First content below the hero on a phone, so its text is the LCP candidate there. */}
         <Reveal variant="static">
           <div className={styles.callout}>
-            <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "#075f52", flexShrink: 0, marginTop: 2 }} aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" width={22} height={22} style={{ color: "var(--fg-accent)", flexShrink: 0, marginTop: 2 }} aria-hidden="true">
               <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
               <path d="M12 11v5M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
             <p>
               Just starting out? We also support{" "}
-              <strong style={{ color: "#143152" }}>early years and Key Stage 1 (Year 1&ndash;2)</strong>.
+              <strong style={{ color: "var(--fg-strong)" }}>early years and Key Stage 1 (Year 1&ndash;2)</strong>.
               The stages below begin at Key Stage 2 &mdash; for younger learners,{" "}
               <Link href="/contact">get in touch</Link> and we&apos;ll tailor
               sessions to where your child is.
@@ -219,15 +226,27 @@ export default function SubjectsPage() {
                       src={subject.image}
                       alt={subject.imageAlt}
                       fill
-                      sizes="(max-width: 1100px) 100vw, 40vw"
-                      style={{ objectFit: "cover" }}
+                      sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 40vw"
+                      placeholder="blur"
+                      blurDataURL={imageBlur[subject.image]}
+                      style={{ objectFit: "cover", objectPosition: imageFocus[subject.image] }}
                     />
                   </div>
                   <div>
                     <div className={styles.subjectTitleRow}>
-                      <SubjectIconScene range={[subjectIndex / subjects.length, (subjectIndex + 1) / subjects.length]}>
-                        <SubjectSvg icon={subject.icon} />
-                      </SubjectIconScene>
+                      {/* plan12.md task 14: "strengthen subject-card -> subject-page continuity" —
+                          the badge's own coloured surface (SubjectIconScene's styles.subjectIcon,
+                          scale/opacity aside) is now inside the ViewTransition boundary, not just
+                          the bare glyph, matching the richer surface-expansion treatment the
+                          homepage's subjectCards already give this same navigation (page.tsx's own
+                          comment on subjectCardIcon). Same shared name either side (subject.id here
+                          equals the homepage/hero's slug-derived name), so the browser morphs
+                          whichever badge the visitor actually clicked from. */}
+                      <ViewTransition name={`subject-icon-${subject.id}-tuition`}>
+                        <SubjectIconScene range={[subjectIndex / subjects.length, (subjectIndex + 1) / subjects.length]}>
+                          <SubjectSvg icon={subject.icon} />
+                        </SubjectIconScene>
+                      </ViewTransition>
                       <div>
                         <h2 className={styles.subjectTitle}>
                           {subject.id === "english" ? (
@@ -249,9 +268,11 @@ export default function SubjectsPage() {
                 <>
                   <div>
                     <div className={styles.subjectTitleRow}>
-                      <SubjectIconScene range={[subjectIndex / subjects.length, (subjectIndex + 1) / subjects.length]}>
-                        <SubjectSvg icon={subject.icon} />
-                      </SubjectIconScene>
+                      <ViewTransition name={`subject-icon-${subject.id}-tuition`}>
+                        <SubjectIconScene range={[subjectIndex / subjects.length, (subjectIndex + 1) / subjects.length]}>
+                          <SubjectSvg icon={subject.icon} />
+                        </SubjectIconScene>
+                      </ViewTransition>
                       <div>
                         <h2 className={styles.subjectTitle}>
                           {subject.id === "english" ? (
@@ -273,8 +294,10 @@ export default function SubjectsPage() {
                       src={subject.image}
                       alt={subject.imageAlt}
                       fill
-                      sizes="(max-width: 1100px) 100vw, 40vw"
-                      style={{ objectFit: "cover" }}
+                      sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 40vw"
+                      placeholder="blur"
+                      blurDataURL={imageBlur[subject.image]}
+                      style={{ objectFit: "cover", objectPosition: imageFocus[subject.image] }}
                     />
                   </div>
                 </>
@@ -288,7 +311,7 @@ export default function SubjectsPage() {
               const isGcse = level.name === "GCSE" && isScience;
 
               return (
-                <Reveal variant="scale" key={level.name} delay={i * 0.09}>
+                <Reveal variant="scale" key={level.name} delay={staggerDelay(i, motionStagger.cards)}>
                   <PointerDepth>
                     <div className={`${styles.levelCard} ${level.dark ? styles.levelCardDark : ""}`}>
                       <div className={styles.levelCardHeader}>

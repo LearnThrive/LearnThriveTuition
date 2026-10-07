@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { ViewTransition } from "react";
 import { ButtonLink } from "@/components/ButtonLink";
 import { Container } from "@/components/Container";
 import { CtaSection } from "@/components/CtaSection";
@@ -12,6 +14,7 @@ import { CinematicBackdrop } from "@/components/motion/primitives/CinematicBackd
 import { SubjectHeroMotif } from "@/components/motion/scenes/SubjectHeroMotif";
 import { SubjectWorld } from "@/components/motion/scenes/SubjectWorld";
 import type { SubjectLandingConfig, SubjectLandingSlug } from "@/lib/site";
+import { motionStagger, staggerDelay } from "@/lib/motion/tokens";
 
 type SubjectLandingPageProps = {
   subject: SubjectLandingConfig;
@@ -44,6 +47,14 @@ export function SubjectLandingPage({ subject }: SubjectLandingPageProps) {
         eyebrow={subject.hero.eyebrow}
         title={subject.hero.title}
         intro={subject.hero.intro}
+        breadcrumb={
+          <Breadcrumbs
+            trail={[
+              { name: "Subjects", path: "/subjects" },
+              { name: `${subject.title} tuition`, path: subject.path },
+            ]}
+          />
+        }
         backdrop={
           <CinematicBackdrop>
             <SubjectHeroMotif slug={subject.slug} />
@@ -60,10 +71,16 @@ export function SubjectLandingPage({ subject }: SubjectLandingPageProps) {
           </div>
         }
         aside={
-          <div className="subject-landing-hero-card">
-            <span className="subject-landing-hero-card__icon">
-              <Icon name={subject.icon} />
-            </span>
+          <div className="subject-landing-hero-card">
+            {/* plan11.md task 14's prototype transition — the other half of the pair in
+                (public)/page.tsx's subjectCards; see that file's comment. subject.path (e.g.
+                "/maths-tuition") is this config's own name for the same route the homepage card's
+                slug field spells without the leading slash, so both sides always agree. */}
+            <ViewTransition name={`subject-icon-${subject.path.slice(1)}`}>
+              <span className="subject-landing-hero-card__icon">
+                <Icon name={subject.icon} />
+              </span>
+            </ViewTransition>
             <span className="subject-landing-hero-card__label">
               {subject.hero.noteLabel}
             </span>
@@ -85,7 +102,7 @@ export function SubjectLandingPage({ subject }: SubjectLandingPageProps) {
               // The first card is the first block below the hero, so it stays static (LCP) —
               // matching the same "first reveal is the explicit opt-out" convention marketing-
               // motion.spec.ts already enforces for /subjects, /about, /contact and /faq.
-              <Reveal key={item.title} variant={index === 0 ? "static" : SUPPORT_VARIANT[subject.slug]} delay={index * 0.07}>
+              <Reveal key={item.title} variant={index === 0 ? "static" : SUPPORT_VARIANT[subject.slug]} delay={staggerDelay(index, motionStagger.list)}>
                 <FeatureCard {...item} index={index + 1} />
               </Reveal>
             ))}

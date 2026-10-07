@@ -1,15 +1,22 @@
 import Link from "next/link";
 import { Brand } from "@/components/Brand";
 import { Container } from "@/components/Container";
+import { MotionToggle } from "@/components/MotionToggle";
 import { PhoneContacts } from "@/components/PhoneContacts";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Reveal } from "@/components/motion/primitives/Reveal";
-import { navigation, siteConfig, subjects } from "@/lib/site";
+import { siteConfig, subjects } from "@/lib/site";
 
+// Kept "Privacy" ahead of the rest: the enquiry form links to it ("you agree to our privacy notice"),
+// and UK GDPR expects a visible privacy notice link.
 const legalLinks = [
   { href: "/privacy", label: "Privacy" },
   { href: "/cookies", label: "Cookies" },
-  { href: "/terms", label: "Terms" },
+  { href: "/terms", label: "Website Terms" },
+  { href: "/tuition-terms", label: "Tuition Terms" },
   { href: "/safeguarding", label: "Safeguarding" },
+  { href: "/complaints", label: "Complaints" },
+  { href: "/accessibility", label: "Accessibility" },
 ] as const;
 
 export function SiteFooter() {
@@ -34,23 +41,44 @@ export function SiteFooter() {
               </p>
             </div>
             <div className="footer-column">
-              <h2>Explore</h2>
-              <ul>
-                {navigation.map((item) => (
-                  <li key={item.href}>
-                    <Link href={item.href}>{item.label}</Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="footer-column">
               <h2>Subjects</h2>
               <ul>
+                <li>
+                  <Link href="/subjects">All subjects</Link>
+                </li>
                 {subjects.map((subject) => (
                   <li key={subject.slug}>
                     <Link href={subject.path}>{subject.title}</Link>
                   </li>
                 ))}
+              </ul>
+            </div>
+            <div className="footer-column">
+              <h2>Company</h2>
+              <ul>
+                <li>
+                  <Link href="/">Home</Link>
+                </li>
+                <li>
+                  <Link href="/about">About</Link>
+                </li>
+                <li>
+                  <Link href="/trust">Trust and policies</Link>
+                </li>
+              </ul>
+            </div>
+            <div className="footer-column">
+              <h2>Support</h2>
+              <ul>
+                <li>
+                  <Link href="/faq">FAQ</Link>
+                </li>
+                <li>
+                  <Link href="/book">Book a free consultation</Link>
+                </li>
+                <li>
+                  <Link href="/contact">Contact</Link>
+                </li>
               </ul>
             </div>
             <div className="footer-column footer-contact">
@@ -94,6 +122,10 @@ export function SiteFooter() {
                 </Link>
               ))}
             </nav>
+          </div>
+          <div className="footer-appearance">
+            <ThemeToggle variant="radio" inverse />
+            <MotionToggle inverse />
           </div>
           <p className="footer-registration">
             {siteConfig.legalName} &middot; Company No. {siteConfig.companyNumber} &middot;

@@ -28,7 +28,11 @@ const primaryRoutes = [
   "/privacy",
   "/cookies",
   "/terms",
+  "/tuition-terms",
   "/safeguarding",
+  "/trust",
+  "/complaints",
+  "/accessibility",
 ];
 const viewports = [
   { name: "mobile-360", width: 360, height: 800 },
@@ -170,6 +174,13 @@ async function run() {
       const response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
       assert.equal(response?.status(), 200, `${route} should return 200`);
       assert.equal(response?.headers()["set-cookie"], undefined, `${route} unexpectedly sets a cookie`);
+      // The production build serves the security headers (src/lib/securityHeaders.ts). The whole run
+      // below happens under that enforced policy, so a script, style, image or font it blocked would
+      // surface as a console error and fail this check.
+      const responseHeaders = response?.headers() ?? {};
+      assert.match(responseHeaders["content-security-policy"] ?? "", /default-src 'self'/, `${route} needs its CSP`);
+      assert.match(responseHeaders["strict-transport-security"] ?? "", /max-age=\d+/, `${route} needs HSTS`);
+      assert.equal(responseHeaders["cross-origin-opener-policy"], "same-origin", `${route} needs COOP`);
       await page.locator("main h1").waitFor({ state: "visible" });
 
       const metadata = await page.evaluate(() => ({
@@ -296,7 +307,10 @@ async function run() {
     const firstSummary = firstFaq.locator("summary");
     await firstSummary.focus();
     await page.keyboard.press("Enter");
-    assert.ok(await firstFaq.locator(".faq-item__answer").isVisible(), "Enter should reveal an FAQ answer");
+    // The answer opens with a short height transition (globals.css, ::details-content), so on the very
+    // first frame it has no size yet: wait for it to appear rather than asserting on that frame.
+    assert.notEqual(await firstFaq.getAttribute("open"), null, "Enter should open the FAQ item");
+    await firstFaq.locator(".faq-item__answer").waitFor({ state: "visible", timeout: 3000 });
     assert.ok(
       await firstSummary.evaluate((element) => getComputedStyle(element).outlineStyle !== "none"),
       "Keyboard focus on the FAQ must remain visible",
@@ -325,10 +339,12 @@ async function run() {
     const noJsPage = await noJsContext.newPage();
     await noJsPage.goto(`${baseUrl}/faq`, { waitUntil: "domcontentloaded" });
     await noJsPage.locator("main details summary").first().click();
-    assert.ok(
-      await noJsPage.locator("main details .faq-item__answer").first().isVisible(),
-      "FAQ should remain usable with JavaScript disabled",
-    );
+    // Native <details> opens without any script; its answer then expands over a short transition.
+    await noJsPage
+      .locator("main details .faq-item__answer")
+      .first()
+      .waitFor({ state: "visible", timeout: 3000 })
+      .catch(() => assert.fail("FAQ should remain usable with JavaScript disabled"));
     await noJsPage.goto(`${baseUrl}/about`, { waitUntil: "domcontentloaded" });
     for (const name of ["Abdurrahman Mustafa", "Tahasin Hasan"]) {
       assert.ok(
@@ -414,6 +430,9 @@ async function run() {
       await Promise.all(element.getAnimations().map((animation) => animation.finished));
     });
     assert.ok(await page.getByRole("navigation", { name: "Main navigation" }).isVisible());
+    // The home hero's staggered entrance can still be running behind the open menu; audit the settled
+    // page, not a half-faded frame (axe blends transient opacity into the colour contrast).
+    await finishAnimations(page);
     assert.deepEqual(
       await auditA11y(page),
       [],
@@ -495,10 +514,17 @@ async function run() {
     assert.equal(enquiryRequests.length, 1, "A valid form sends exactly one request");
     assert.deepEqual(
       Object.keys(enquiryRequests[0]).sort(),
-      ["contactMethod", "email", "parentName", "phone", "subject", "support", "yearGroup"],
+      ["contactMethod", "elapsedMs", "email", "parentName", "phone", "subject", "support", "website", "yearGroup"],
       "The enquiry payload must match what the API validates",
     );
     assert.equal(enquiryRequests[0].contactMethod, "Phone");
+    // The two abuse-protection fields (route.ts): the honeypot a person never fills, and how long the
+    // form was open, which is a real elapsed time and not a placeholder.
+    assert.equal(enquiryRequests[0].website, "", "The honeypot must be empty for a real visitor");
+    assert.ok(
+      Number.isFinite(enquiryRequests[0].elapsedMs) && enquiryRequests[0].elapsedMs > 0,
+      "The form must report how long it was open",
+    );
     assert.match(await sent.innerText(), /Your enquiry has been sent/i);
     assert.doesNotMatch(
       await page.locator("main").innerText(),
@@ -565,6 +591,89 @@ async function run() {
       assert.deepEqual(hiddenWithoutScript, [], `${route} hides content when JavaScript is off`);
     }
     await bareContext.close();
+
+    // ── Saved choices and the site search ─────────────────────────────────────────────────────────────
+    // A fresh context, so this cannot disturb the "nothing is stored after the enquiry flow" check below.
+    {
+      const choiceContext = await browser.newContext({ locale: "en-GB", viewport: { width: 1440, height: 1000 } });
+      const choicePage = await choiceContext.newPage();
+      choicePage.on("console", (message) => {
+        if (message.type() === "error") consoleErrors.push(`${choicePage.url()}: ${message.text()}`);
+      });
+      choicePage.on("pageerror", (error) => pageErrors.push(`${choicePage.url()}: ${error.message}`));
+      const stored = () =>
+        choicePage.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage }, cookie: document.cookie }));
+      const attribute = (name) => choicePage.evaluate((attr) => document.documentElement.getAttribute(attr), name);
+
+      await choicePage.goto(`${baseUrl}/about`, { waitUntil: "domcontentloaded" });
+      await choicePage.locator("main h1").waitFor({ state: "visible" });
+      assert.deepEqual(await stored(), { local: {}, session: {}, cookie: "" }, "Browsing alone must store nothing");
+
+      // Theme: System -> Light -> Dark, remembered, and applied before first paint after a reload.
+      await choicePage.getByRole("button", { name: /Colour theme: System/ }).click();
+      await choicePage.getByRole("button", { name: /Colour theme: Light/ }).click();
+      assert.equal(await attribute("data-theme"), "dark", "Two presses of the theme control should reach Dark");
+      assert.deepEqual((await stored()).local, { "lt-theme": "dark" }, "Only the theme choice may be stored");
+      await choicePage.reload({ waitUntil: "domcontentloaded" });
+      assert.equal(await attribute("data-theme"), "dark", "The saved theme must be applied before first paint");
+      assert.equal(
+        await choicePage.evaluate(() => getComputedStyle(document.body).backgroundColor),
+        "rgb(10, 26, 43)",
+        "The saved Dark theme must be what is painted",
+      );
+      await choicePage.locator("main h1").waitFor({ state: "visible" });
+      await settleReveals(choicePage);
+      assert.deepEqual(await auditA11y(choicePage), [], "The saved dark theme has serious axe violations");
+
+      // Motion: Reduce is remembered too, and switches the whole site to its reduced tier.
+      await choicePage.locator("footer label", { hasText: "Reduce" }).click();
+      assert.equal(await attribute("data-motion"), "reduce");
+      assert.deepEqual((await stored()).local, { "lt-theme": "dark", "lt-motion": "reduce" });
+      await choicePage.reload({ waitUntil: "domcontentloaded" });
+      assert.equal(await attribute("data-motion"), "reduce", "The saved motion choice must be applied before first paint");
+      await choicePage
+        .waitForFunction(() => document.documentElement.getAttribute("data-motion-tier") === "reduced", undefined, { timeout: 5000 })
+        .catch(() => assert.fail("A saved Reduce choice must put the site on its reduced motion tier"));
+
+      // Back to the device's settings: choosing System removes what was saved.
+      await choicePage.getByRole("button", { name: /Colour theme: Dark/ }).click();
+      await choicePage
+        .locator("fieldset", { hasText: "Motion" })
+        .locator("label", { hasText: "System" })
+        .click();
+      assert.deepEqual((await stored()).local, {}, "Choosing System must leave nothing saved");
+
+      // The site search: shortcut, button, a result, Escape, and only a session-scoped recent list.
+      const palette = choicePage.getByRole("dialog", { name: "Search LearnThrive" });
+      await choicePage.keyboard.press("Control+k");
+      await palette.waitFor({ state: "visible", timeout: 8000 });
+      await choicePage.getByRole("combobox", { name: "Search LearnThrive" }).fill("complaints");
+      await choicePage.getByRole("option", { name: /^Complaints/ }).first().waitFor({ state: "visible" });
+      await choicePage.keyboard.press("Enter");
+      await choicePage.waitForURL(`${baseUrl}/complaints`);
+      await palette.waitFor({ state: "hidden" });
+      const afterSearch = await stored();
+      assert.deepEqual(afterSearch.local, {}, "The search must not write to local storage");
+      assert.deepEqual(Object.keys(afterSearch.session), ["lt-palette-public:recent"], "Only the session recent list may be stored");
+      assert.equal(afterSearch.cookie, "");
+
+      const searchButton = choicePage.getByRole("button", { name: "Search the site" });
+      await searchButton.click();
+      await palette.waitFor({ state: "visible" });
+      await choicePage.getByRole("combobox", { name: "Search LearnThrive" }).fill("maths");
+      await choicePage.getByRole("option").first().waitFor({ state: "visible" });
+      await finishAnimations(choicePage);
+      assert.deepEqual(await auditA11y(choicePage), [], "The open site search has serious axe violations");
+      await choicePage.keyboard.press("Escape");
+      await palette.waitFor({ state: "hidden" });
+      assert.equal(
+        await choicePage.evaluate(() => document.activeElement?.hasAttribute("data-palette-trigger")),
+        true,
+        "Closing the search must return focus to the button that opened it",
+      );
+      assert.deepEqual(await choiceContext.cookies(), [], "Choices and search must never set a cookie");
+      await choiceContext.close();
+    }
 
     assert.deepEqual(await context.cookies(), [], "The application unexpectedly set cookies");
     assert.deepEqual(
