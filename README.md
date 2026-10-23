@@ -48,13 +48,25 @@ sent), and checks the site with JavaScript off.
 
 Run both the production checks and browser suite together with `npm run check:full`.
 
+`.github/workflows/check.yml` runs `npm run check` plus `npm audit` on every pull request, on pushes
+to `main`, and weekly — the weekly run is what catches an advisory published against dependencies
+that have not changed. Dependabot (`.github/dependabot.yml`) opens grouped update pull requests
+weekly, keeping `next`/`eslint-config-next` and the React packages moving in lockstep.
+
 ## Enquiries
 
 The booking form sends the enquiry directly to LearnThrive through `/api/enquiry`, and the
 parent receives a confirmation email. The route validates every field, requires the request
 origin to be an allowed one, rate-limits by IP and sends two emails through Resend (each with a
 plain-text version): the notification to LearnThrive and the auto-reply to the enquirer, which
-promises a reply within 5 working days. It reads these environment variables (see `.env.local`;
+promises a reply within 5 working days.
+
+Validation is server-side and does not trust the form: every field has a length cap, the one-line
+fields reject control characters (`subject` becomes the notification's Subject header), and the two
+`<select>` fields — year group and subject — are checked against the exact options the form offers
+rather than accepted as free text. The route cannot import `lib/site.ts` (it is loaded standalone by
+its own tests), so it keeps a copy of those two lists and `tests/site.test.mjs` fails if the copy
+drifts. Nothing a visitor sends is persisted, and no error message echoes a server setting. It reads these environment variables (see `.env.local`;
 never commit real values):
 
 - `RESEND_API_KEY` — required; without it the enquiry cannot be sent.
@@ -64,6 +76,9 @@ never commit real values):
 - `ALLOWED_ORIGINS` — comma-separated origins allowed to post (defaults to the production site;
   `http://localhost:3000` is added in development, so run `npm run dev` on port 3000 if you want
   to submit a real test enquiry).
+- `TRUSTED_PROXY_HOPS` — optional, default `1`: which `X-Forwarded-For` entry, counted from the
+  end, the per-IP limit uses. `1` is the address the host's own proxy added, which is right for
+  Render. Set `2` only if you put a second proxy (your own Cloudflare zone, for example) in front.
 
 **In production all three of `RESEND_API_KEY`, `RESEND_FROM_EMAIL` and `ENQUIRY_EMAIL` must be set.**
 If any is missing the route fails closed: it sends nothing and the form tells the visitor to email
@@ -71,10 +86,14 @@ the inbox directly, rather than sending from a shared sender or to a default add
 
 Abuse protection is invisible to a real visitor and uses no third-party service: a honeypot field
 (`website`), a minimum time between opening and sending the form (2.5 seconds, production only),
-the same enquiry sent twice within a minute counts once, and a per-IP limit. A request that trips
-the honeypot or the timer gets the normal success answer and nothing is sent. The route logs one
-line per outcome and never logs a name, email, phone, message or IP. `tests/enquiry.test.mjs`
-covers all of this.
+the same enquiry sent twice within a minute counts once, and a per-IP limit (5 per 15 minutes). A
+request that trips the honeypot or the timer gets the normal success answer and nothing is sent.
+The honeypot and the timer only stop simple bots (a script can fake both), so the per-IP limit is
+the real defence, and on Render it is the only one: Render has no rate-limit setting of its own.
+It keys on the address the host's proxy added, never on what the client sent (see
+`TRUSTED_PROXY_HOPS`), and it counts per server instance, so it is exact on one instance. Bodies
+over 16 KB are refused without being read in full. The route logs one line per outcome and never
+logs a name, email, phone, message or IP. `tests/enquiry.test.mjs` covers all of this.
 
 `GET /api/health` answers `{"status":"ok"}` for an uptime monitor. It reads no configuration and
 calls nothing.

@@ -1,0 +1,26 @@
+# Runs the same gate as `npm run check` locally (lint, typecheck, 179 tests, production build) plus
+# `npm audit`, so a known-vulnerable dependency fails the build instead of waiting for someone to
+# run an audit by hand. The browser pass (`npm run test:browser`) is deliberately not here: it needs
+# a real Chromium and is a local/manual step.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Catches a newly published advisory against dependencies that have not changed.
+    - cron: "0 7 * * 1"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm audit --audit-level=moderate

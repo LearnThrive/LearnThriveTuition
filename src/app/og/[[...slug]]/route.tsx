@@ -7,7 +7,9 @@ import { ogPageFor, ogPages } from "@/lib/ogPages";
  * a mint rule, the page's own eyebrow and title, the wordmark — replacing the single static
  * og-image.png. One route handler for every public page, statically generated at build time from the
  * same table (lib/ogPages.ts) the sitemap-style listing uses, so a new page that is added to the table
- * gets a card and one that is not falls back to the home card instead of a 404.
+ * gets a card. Any other path is a 404 (`dynamicParams` below): rendering it on request would save a new
+ * image to the server's disk for every made-up URL. tests/site.test.mjs fails if a page is missing
+ * from the table.
  *
  * It uses `next/og`'s built-in sans-serif: satori (the renderer) accepts only TTF/OTF/WOFF, and the
  * site's own fonts ship as WOFF2 through next/font. Shipping a TTF of the heading face for this one
@@ -15,6 +17,7 @@ import { ogPageFor, ogPages } from "@/lib/ogPages";
  * default face. The OG image is always the light/brand look, in both themes.
  */
 export const dynamic = "force-static";
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return [{ slug: [] as string[] }, ...Object.keys(ogPages).filter((p) => p !== "/").map((p) => ({ slug: p.split("/").filter(Boolean) }))];

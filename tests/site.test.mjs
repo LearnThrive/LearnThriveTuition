@@ -160,7 +160,7 @@ test("production images exist and stay within their payload budgets", () => {
 });
 
 // plan15 Wave 12: a page that exists but is missing from the sitemap is a page search engines are
-// never told about, and one missing from ogPages gets the home page's preview card instead of its own.
+// never told about, and one missing from ogPages gets no preview card at all (/og/<path> is a 404).
 const pageFolders = readdirSync(appDir).filter(
   (name) => statSync(join(appDir, name)).isDirectory() && existsSync(join(appDir, name, "page.tsx")),
 );
@@ -200,4 +200,27 @@ test("the site has no signed-in app, login or portal routes of its own", () => {
   for (const forbidden of ["login", "dashboard", "portal-opening-soon", "dev", "403"]) {
     assert.ok(!pageFolders.includes(forbidden), `${forbidden} must not exist on this site`);
   }
+});
+
+// The enquiry route hand-copies these two lists because it is loaded standalone and cannot import
+// lib/site.ts (see the comment at the top of route.ts). A copy that drifts is a form option the
+// server starts refusing, or an option the server accepts that the form never offers.
+test("the enquiry route's allowlists are an exact copy of the options lib/site.ts offers", () => {
+  const routeSource = readFileSync(join(appDir, "api", "enquiry", "route.ts"), "utf8");
+  const quoted = (source, marker) => {
+    const start = source.indexOf(marker);
+    assert.notEqual(start, -1, `${marker} not found`);
+    const open = source.indexOf("[", start);
+    return [...source.slice(open, source.indexOf("]", open)).matchAll(/"([^"]*)"/g)].map((m) => m[1]);
+  };
+  assert.deepEqual(
+    quoted(routeSource, "const ALLOWED_YEAR_GROUPS"),
+    quoted(siteSource, "export const yearGroups"),
+    "ALLOWED_YEAR_GROUPS has drifted from yearGroups in lib/site.ts",
+  );
+  assert.deepEqual(
+    quoted(routeSource, "const ALLOWED_SUBJECTS"),
+    quoted(siteSource, "export const subjectOptions"),
+    "ALLOWED_SUBJECTS has drifted from subjectOptions in lib/site.ts",
+  );
 });

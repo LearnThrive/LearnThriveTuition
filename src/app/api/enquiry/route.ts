@@ -7,6 +7,11 @@ import { Resend } from "resend";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://learnthrivetuition.co.uk";
 const RECIPIENT = process.env.ENQUIRY_EMAIL ?? "info@learnthrivetuition.co.uk";
 
+/** The published inbox, the one address safe to show a visitor. Deliberately NOT `RECIPIENT`: that is
+ * ENQUIRY_EMAIL, a deploy setting that may well point somewhere internal, and the 503 below is a
+ * response a stranger can trigger. A client-visible string never interpolates a server setting. */
+const PUBLIC_CONTACT_EMAIL = "info@learnthrivetuition.co.uk";
+
 const ALLOWED_ORIGINS = new Set(
   (process.env.ALLOWED_ORIGINS ?? "https://learnthrivetuition.co.uk,https://www.learnthrivetuition.co.uk")
     .split(",")
@@ -63,6 +68,24 @@ const RATE_MAX = 5; // max submissions per window per IP
 
 const hits = new Map<string, number[]>();
 
+/**
+ * The address the limiter counts. NOT the first X-Forwarded-For entry: that is whatever the client
+ * sent, because a proxy adds the address it saw to the END of the list rather than replacing it
+ * (Render does this, as do nginx and most load balancers; Next itself only fills the header when it
+ * is absent). Counting the first entry let a script send a new made-up address with every request
+ * and never be limited. The entry TRUSTED_PROXY_HOPS from the end is the one the host's own proxy
+ * added: 1 (the default) is right for Render; a second proxy in front of it (a Cloudflare zone of
+ * your own, say) makes it 2.
+ */
+function clientIp(request: Request): string {
+  const entries = (request.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const hops = Math.max(1, Number.parseInt(process.env.TRUSTED_PROXY_HOPS ?? "", 10) || 1);
+  return entries[Math.max(0, entries.length - hops)] ?? "unknown";
+}
+
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const timestamps = hits.get(ip) ?? [];
@@ -110,6 +133,38 @@ const fieldLimits: Record<keyof EnquiryBody, number> = {
   contactMethod: 10,
 };
 
+// The options the two <select> fields actually offer. Duplicated from lib/site.ts (`yearGroups`,
+// `subjectOptions`) for the same reason as SITE_URL above: this file is loaded standalone by
+// tests/enquiry.test.mjs and cannot import it. tests/site.test.mjs compares the two copies, so they
+// cannot drift apart silently.
+//
+// Without these, both fields were free text up to 50 characters — and `subject` is interpolated into
+// the notification's Subject header, so anything typed there arrived as the subject line of mail from
+// LearnThrive's own verified sender.
+const ALLOWED_YEAR_GROUPS: ReadonlySet<string> = new Set([
+  "Year 3",
+  "Year 4",
+  "Year 5",
+  "Year 6",
+  "Year 7",
+  "Year 8",
+  "Year 9",
+  "Year 10",
+  "Year 11",
+  "Year 12",
+  "Year 13",
+  "Other / not sure",
+]);
+
+const ALLOWED_SUBJECTS: ReadonlySet<string> = new Set([
+  "Maths",
+  "English",
+  "Science",
+  "11+ Preparation",
+  "More than one subject",
+  "Not sure yet",
+]);
+
 function validateBody(body: unknown): body is EnquiryBody {
   if (typeof body !== "object" || body === null) return false;
   const b = body as Record<string, unknown>;
@@ -127,10 +182,47 @@ function validateBody(body: unknown): body is EnquiryBody {
   }
   if (typeof b.phone !== "string") return false;
   if (b.phone.length > fieldLimits.phone) return false;
+  // Only the message may span lines. A line break or other control character in a one-line field
+  // is never typed by a person, and `subject` ends up in the email's Subject header.
+  for (const key of ["parentName", "email", "phone", "yearGroup", "subject", "contactMethod"] as const) {
+    if (/\p{Cc}/u.test(b[key] as string)) return false;
+  }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email as string)) return false;
   if ((b.support as string).trim().length < 20) return false;
   if (b.contactMethod !== "Email" && b.contactMethod !== "Phone") return false;
+  if (!ALLOWED_YEAR_GROUPS.has(b.yearGroup as string)) return false;
+  if (!ALLOWED_SUBJECTS.has(b.subject as string)) return false;
   return true;
+}
+
+/** A real enquiry is about 2 KB at most (the field limits above, even in four-byte characters). Without
+ * a cap, `request.json()` buffers whatever arrives, however large, and route handlers have none. */
+const MAX_BODY_BYTES = 16 * 1024;
+const TOO_LARGE = Symbol("too-large");
+
+/** The body as JSON, TOO_LARGE past MAX_BODY_BYTES (it stops reading there), or null if not JSON. */
+async function readJsonBody(request: Request): Promise<unknown> {
+  if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES) return TOO_LARGE;
+  if (!request.body) return null;
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel().catch(() => {});
+      return TOO_LARGE;
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  try {
+    return JSON.parse(text + decoder.decode());
+  } catch {
+    return null;
+  }
 }
 
 function escapeHtml(text: string): string {
@@ -138,7 +230,10 @@ function escapeHtml(text: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    // Not needed by any call site today (every interpolation below lands in text content, never in
+    // an attribute), but an attribute is one edit away and this is the cheap half of that edit.
+    .replace(/'/g, "&#39;");
 }
 
 // Colours below are hardcoded hex, not this app's CSS custom properties — email clients don't
@@ -238,9 +333,11 @@ function buildEmailText(data: EnquiryBody): string {
   ].join("\n");
 }
 
-function buildAutoReplyHtml(name: string): string {
+// The parent's confirmation repeats NOTHING they typed. It goes to whatever address was entered, so a
+// name echoed back would let anyone send their own text, from LearnThrive's verified sender, to anyone.
+function buildAutoReplyHtml(): string {
   return emailWrapper(`
-    <h2 style="margin:0 0 8px;color:#0e2a47;font-size:22px;font-weight:800;">Thank you for your enquiry, ${escapeHtml(name)}!</h2>
+    <h2 style="margin:0 0 8px;color:#0e2a47;font-size:22px;font-weight:800;">Thank you for your enquiry!</h2>
     <div style="width:48px;height:4px;background:#075f52;border-radius:2px;margin-bottom:24px;"></div>
     <p style="margin:0 0 16px;color:#435466;font-size:15px;line-height:1.65;">We have received your enquiry and a member of the LearnThrive Tuition team will be in touch shortly.</p>
     <p style="margin:0 0 16px;color:#435466;font-size:15px;line-height:1.65;">We aim to respond to all enquiries within <strong style="color:#0e2a47;">5 working days</strong>.</p>
@@ -250,9 +347,9 @@ function buildAutoReplyHtml(name: string): string {
 }
 
 /** The parent's confirmation as plain text, word for word what the HTML says. */
-function buildAutoReplyText(name: string): string {
+function buildAutoReplyText(): string {
   return [
-    `Thank you for your enquiry, ${name}!`,
+    "Thank you for your enquiry!",
     "",
     "We have received your enquiry and a member of the LearnThrive Tuition team will be in touch shortly.",
     "",
@@ -282,10 +379,7 @@ export async function POST(request: Request) {
     }
 
     // ── Rate limiting ─────────────────────────────────────────
-    const forwarded = request.headers.get("x-forwarded-for");
-    const ip = forwarded?.split(",")[0]?.trim() ?? "unknown";
-
-    if (isRateLimited(ip)) {
+    if (isRateLimited(clientIp(request))) {
       logOutcome("rate_limited");
       return Response.json(
         { error: "Too many enquiries. Please try again later." },
@@ -293,7 +387,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const body: unknown = await request.json().catch(() => null);
+    const body = await readJsonBody(request);
+
+    if (body === TOO_LARGE) {
+      logOutcome("rejected", "too-large");
+      return Response.json(
+        { error: "Invalid form data. Please check your answers and try again." },
+        { status: 413 },
+      );
+    }
 
     if (!validateBody(body)) {
       logOutcome("rejected", "invalid");
@@ -321,7 +423,7 @@ export async function POST(request: Request) {
     if (!apiKey || productionMisconfigured) {
       logOutcome("unavailable", !apiKey ? "no-api-key" : "incomplete-production-config");
       return Response.json(
-        { error: `Enquiries are not accepting submissions right now. Please email ${RECIPIENT} directly.` },
+        { error: `Enquiries are not accepting submissions right now. Please email ${PUBLIC_CONTACT_EMAIL} directly.` },
         { status: 503 },
       );
     }
@@ -367,8 +469,8 @@ export async function POST(request: Request) {
         to: [body.email],
         replyTo: RECIPIENT,
         subject: "We've received your enquiry — LearnThrive Tuition",
-        html: buildAutoReplyHtml(body.parentName),
-        text: buildAutoReplyText(body.parentName),
+        html: buildAutoReplyHtml(),
+        text: buildAutoReplyText(),
       });
     } catch (err) {
       console.error("Auto-reply failed:", err);

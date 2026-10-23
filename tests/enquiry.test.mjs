@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import test from "node:test";
 import { compileFunction } from "node:vm";
 import ts from "typescript";
+import { loadTsFrom } from "./_tsLoader.mjs";
 
 // Run the real TypeScript route using the existing compiler dependency. This also
 // works on the supported Node 20 releases, which cannot import TypeScript directly.
@@ -45,6 +46,12 @@ const validEnquiry = {
   support: "We would like help with fractions and algebra.",
   contactMethod: "Email",
 };
+
+// The options the form actually offers, from the one place that defines them. The route itself
+// cannot import this file (see the comment at the top of route.ts), so its allowlists are a hand copy
+// — these drive the test that proves the copy accepts everything the form can send, and
+// tests/site.test.mjs checks the two copies are still character-for-character identical.
+const { yearGroups, subjectOptions } = loadTsFrom(import.meta.url, "../src/lib/site.ts");
 
 const SITE_ORIGIN = "https://learnthrivetuition.co.uk";
 
@@ -166,7 +173,7 @@ test("email credentials are read at request time and a configured enquiry can su
 
   assert.deepEqual(autoReply.to, ["parent@example.com"]);
   assert.equal(autoReply.reply_to, "info@learnthrivetuition.co.uk");
-  assert.match(autoReply.html, /Thank you for your enquiry, Test Parent/);
+  assert.match(autoReply.html, /Thank you for your enquiry!/);
 });
 
 test("a failed auto-reply does not fail the overall enquiry submission", async (t) => {
@@ -266,6 +273,86 @@ test("a failed send does not leave the parent's retry blocked as a duplicate", a
   assert.equal((await POST(request())).status, 200);
 });
 
+// The first X-Forwarded-For entry is whatever the client sent; Render's proxy (like most) adds the
+// address it saw to the end. `made` is a client's own invented entry, `seen` the one the proxy added.
+function viaProxy(made, seen) {
+  return { origin: SITE_ORIGIN, "x-forwarded-for": made ? `${made}, ${seen}` : seen };
+}
+
+test("a made-up X-Forwarded-For address on every request does not get round the per-IP limit", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  mockResend(t);
+  const { POST } = loadRoute();
+  const statuses = [];
+  for (let i = 0; i < 6; i += 1) {
+    const body = { ...validEnquiry, support: `${validEnquiry.support} Attempt ${i}.` };
+    statuses.push((await POST(request(body, viaProxy(`203.0.113.${i}`, "198.51.100.7")))).status);
+  }
+  assert.deepEqual(statuses, [200, 200, 200, 200, 200, 429]);
+});
+
+test("another visitor behind the same proxy keeps their own allowance", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  mockResend(t);
+  const { POST } = loadRoute();
+  for (let i = 0; i < 5; i += 1) await POST(request(validEnquiry, viaProxy(null, "198.51.100.7")));
+  assert.equal((await POST(request(validEnquiry, viaProxy(null, "198.51.100.7")))).status, 429);
+  assert.equal((await POST(request(validEnquiry, viaProxy(null, "198.51.100.8")))).status, 200);
+});
+
+test("TRUSTED_PROXY_HOPS=2 counts the address added by the outer of two proxies", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  setEnv(t, "TRUSTED_PROXY_HOPS", "2");
+  mockResend(t);
+  const { POST } = loadRoute();
+  // made-up entry, the visitor (added by the outer proxy), the outer proxy (added by Render)
+  const headers = (made, visitor) => ({ origin: SITE_ORIGIN, "x-forwarded-for": `${made}, ${visitor}, 104.16.0.1` });
+  for (let i = 0; i < 5; i += 1) await POST(request(validEnquiry, headers(`203.0.113.${i}`, "198.51.100.7")));
+  assert.equal((await POST(request(validEnquiry, headers("203.0.113.99", "198.51.100.7")))).status, 429);
+  assert.equal((await POST(request(validEnquiry, headers("203.0.113.99", "198.51.100.8")))).status, 200);
+});
+
+test("a body over 16 KB is refused with 413 and never reaches Resend", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  t.mock.method(globalThis, "fetch", () => assert.fail("An oversized request must not contact Resend"));
+  const { POST } = loadRoute();
+  const response = await POST(request({ ...validEnquiry, padding: "x".repeat(20 * 1024) }));
+  assert.equal(response.status, 413);
+});
+
+test("a declared Content-Length over 16 KB is refused without reading the body", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  t.mock.method(globalThis, "fetch", () => assert.fail("An oversized request must not contact Resend"));
+  const { POST } = loadRoute();
+  const oversized = new Request("http://localhost/api/enquiry", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", origin: SITE_ORIGIN, "content-length": String(50 * 1024 * 1024) },
+    body: JSON.stringify(validEnquiry),
+  });
+  const response = await POST(oversized);
+  assert.equal(response.status, 413);
+  assert.equal(oversized.bodyUsed, false);
+});
+
+test("a line break in a one-line field is rejected (the subject becomes an email header)", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  t.mock.method(globalThis, "fetch", () => assert.fail("An invalid enquiry must not contact Resend"));
+  const { POST } = loadRoute();
+  for (const field of ["subject", "parentName", "yearGroup"]) {
+    const response = await POST(request({ ...validEnquiry, [field]: "Maths\r\nBcc: someone@example.test" }));
+    assert.equal(response.status, 400, field);
+  }
+});
+
+test("the message itself may still span lines", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  const sent = mockResend(t);
+  const { POST } = loadRoute();
+  const response = await POST(request({ ...validEnquiry, support: "Fractions, mainly.\nAlgebra after half term." }));
+  assert.equal(response.status, 200);
+  assert.equal(sent.length, 2);
+});
+
 test("the log line for an outcome carries no personal data", async (t) => {
   setApiKey(t, "re_test_not_a_real_key");
   mockResend(t);
@@ -289,7 +376,7 @@ test("both emails carry a plain-text alternative that says what the HTML says", 
   assert.match(adminEmail.text, /Parent\/Guardian: Test Parent/);
   assert.match(adminEmail.text, /fractions and algebra/);
   assert.match(adminEmail.text, /Preferred Contact: Email/);
-  assert.match(autoReply.text, /Thank you for your enquiry, Test Parent!/);
+  assert.match(autoReply.text, /Thank you for your enquiry!/);
   for (const email of sent) assert.doesNotMatch(email.text, /<[a-z]+[^>]*>/, "plain text has no markup");
 });
 
@@ -317,6 +404,18 @@ test("the HTML declares a light-only design, gives every surface its own backgro
   }
 });
 
+test("the parent's confirmation repeats nothing they typed (it goes to any address entered)", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  const sent = mockResend(t);
+  const { POST } = loadRoute();
+  const typed = { ...validEnquiry, parentName: "Claim your refund at refunds-example.test" };
+  await POST(request(typed));
+  const autoReply = sent[1];
+  for (const part of [autoReply.html, autoReply.text, autoReply.subject]) {
+    assert.doesNotMatch(part, /refunds-example|fractions and algebra|Maths|Year 8/);
+  }
+});
+
 test("everything a sender typed is escaped in the HTML and appears untouched in the plain text", async (t) => {
   setApiKey(t, "re_test_not_a_real_key");
   const sent = mockResend(t);
@@ -326,4 +425,44 @@ test("everything a sender typed is escaped in the HTML and appears untouched in 
   assert.doesNotMatch(adminEmail.html, /<script>alert/);
   assert.match(adminEmail.html, /&lt;script&gt;/);
   assert.match(adminEmail.text, /<script>alert\(1\)<\/script>/);
+});
+
+// Both <select> fields are closed sets. `subject` in particular is interpolated into the
+// notification's Subject header, so free text there meant mail from LearnThrive's own verified
+// sender carrying a subject line a stranger chose.
+test("a year group or subject the form does not offer is refused", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  t.mock.method(globalThis, "fetch", () => assert.fail("An invalid enquiry must not contact Resend"));
+  const { POST } = loadRoute();
+  const rejected = [
+    { ...validEnquiry, subject: "Claim your refund at refunds-example.test" },
+    { ...validEnquiry, subject: "maths" }, // right option, wrong case
+    { ...validEnquiry, yearGroup: "Year 99" },
+    { ...validEnquiry, yearGroup: "Reception" },
+  ];
+  for (const body of rejected) {
+    const label = `${body.yearGroup} / ${body.subject}`;
+    assert.equal((await POST(request(body))).status, 400, label);
+  }
+});
+
+test("every option the form offers is accepted by the route's allowlists", async (t) => {
+  setApiKey(t, "re_test_not_a_real_key");
+  mockResend(t);
+  const { POST } = loadRoute();
+  const cases = [
+    ...yearGroups.map((yearGroup) => ({ ...validEnquiry, yearGroup })),
+    ...subjectOptions.map((subject) => ({ ...validEnquiry, subject })),
+  ];
+  // A distinct proxy-seen address and a distinct message per case, so neither the per-IP limit nor
+  // the duplicate window (not what this test is about) can mask a rejection.
+  let n = 0;
+  for (const body of cases) {
+    n += 1;
+    const response = await POST(
+      request({ ...body, support: `${validEnquiry.support} Case ${n}.` }, viaProxy(null, `198.51.100.${n}`)),
+    );
+    assert.equal(response.status, 200, `${body.yearGroup} / ${body.subject}`);
+  }
+  assert.ok(n >= 18, "the form offers at least 12 year groups and 6 subjects");
 });

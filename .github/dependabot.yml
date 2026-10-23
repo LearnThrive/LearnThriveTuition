@@ -1,0 +1,27 @@
+# Issue 18 of the security audit: nothing was watching the dependency tree, so the October 2026
+# Next.js advisories (a critical RCE among them) sat unflagged on a pinned 16.3.8 until an audit
+# looked. Weekly is frequent enough to catch an advisory while it is still news and rare enough
+# not to become noise on a site with eight runtime dependencies.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # next and eslint-config-next must move together (they share a major/minor line), so a single
+    # PR that bumps both is what we want rather than two that each fail `npm run lint`.
+    groups:
+      next:
+        patterns:
+          - next
+          - eslint-config-next
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+      dev-dependencies:
+        dependency-type: development
