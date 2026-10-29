@@ -117,10 +117,10 @@ export default function TermsPage() {
           title: "Links to external services",
           content: (
             <p>
-              Links to social media and guidance from other organisations are
-              provided for convenience. Those services control their own content,
-              availability and privacy practices. Read their information before
-              using them or sharing personal details.
+              Links to social media, the separate tutor login and guidance from
+              other organisations are provided for convenience. Those services
+              control their own content, availability and privacy practices.
+              Read their information before using them or sharing personal details.
             </p>
           ),
         },
