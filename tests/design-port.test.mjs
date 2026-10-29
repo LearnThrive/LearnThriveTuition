@@ -105,9 +105,9 @@ test("marketing content from the legacy site is preserved", () => {
   }
 });
 
-test("the footer keeps the external tutor login and company registration", () => {
+test("the footer keeps its external links safe and the company registration", () => {
   const footer = read(join(srcDir, "components", "SiteFooter.tsx"));
-  assert.match(footer, /tutorLoginUrl/);
+  assert.doesNotMatch(footer, /tutorLoginUrl/, "The tutor login link was deliberately removed");
   assert.match(footer, /target="_blank"/);
   assert.match(footer, /rel="noreferrer"/);
   assert.match(footer, /companyNumber/);
