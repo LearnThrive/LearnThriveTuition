@@ -1427,7 +1427,9 @@
 @media (max-width: 640px) {
   .whySection,
   .subjectsSection,
-  .levelsSection {
+  .levelsSection,
+  .trustSection,
+  .testimonialsSection {
     padding-left: 16px;
     padding-right: 16px;
   }

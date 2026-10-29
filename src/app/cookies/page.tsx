@@ -112,11 +112,10 @@ export default function CookiesPage() {
           title: "External links",
           content: (
             <p>
-              Footer links to Instagram, LinkedIn and the separate tutor login
-              do not load those services into this website. Their own websites
-              are contacted only after you choose a link. Once opened, the
-              destination service may use cookies or similar technologies under
-              its own notice and controls.
+              Footer links to Instagram and LinkedIn do not load those services
+              into this website. Their own websites are contacted only after you
+              choose a link. Once opened, the destination service may use cookies
+              or similar technologies under its own notice and controls.
             </p>
           ),
         },

@@ -63,8 +63,13 @@ function looksAutomated(raw: Record<string, unknown>): string | null {
 }
 
 // ── In-memory sliding-window rate limiter ────────────────────────
+// `hits` lives in module memory, and `next start` answers requests from several worker processes, each
+// with its own copy of it, so the real allowance is RATE_MAX PER PROCESS, not per instance: measured at
+// about three processes on Render (2026-10-25), so ~15 per IP per window rather than 5. Making it exact
+// would need a shared store this site deliberately has not got. The key itself is sound either way —
+// see clientIp below: a spoofed X-Forwarded-For cannot start a fresh count.
 const RATE_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const RATE_MAX = 5; // max submissions per window per IP
+const RATE_MAX = 5; // max submissions per window per IP, per process
 
 const hits = new Map<string, number[]>();
 

@@ -1,4 +1,7 @@
-.statement {
+/* A default only, so :where() gives it no specificity and the caller's className always wins. As a
+   plain class it tied with the caller's, and the production build orders the two stylesheets the
+   other way round from `next dev`, so the homepage statement lost its bottom margin only when live. */
+:where(.statement) {
   margin: 0;
 }
 

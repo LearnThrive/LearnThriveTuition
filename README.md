@@ -86,14 +86,22 @@ the inbox directly, rather than sending from a shared sender or to a default add
 
 Abuse protection is invisible to a real visitor and uses no third-party service: a honeypot field
 (`website`), a minimum time between opening and sending the form (2.5 seconds, production only),
-the same enquiry sent twice within a minute counts once, and a per-IP limit (5 per 15 minutes). A
-request that trips the honeypot or the timer gets the normal success answer and nothing is sent.
+the same enquiry sent twice within a minute counts once, and a per-IP limit (5 per 15 minutes, per
+process). A request that trips the honeypot or the timer gets the normal success answer and
+nothing is sent.
 The honeypot and the timer only stop simple bots (a script can fake both), so the per-IP limit is
 the real defence, and on Render it is the only one: Render has no rate-limit setting of its own.
 It keys on the address the host's proxy added, never on what the client sent (see
-`TRUSTED_PROXY_HOPS`), and it counts per server instance, so it is exact on one instance. Bodies
-over 16 KB are refused without being read in full. The route logs one line per outcome and never
-logs a name, email, phone, message or IP. `tests/enquiry.test.mjs` covers all of this.
+`TRUSTED_PROXY_HOPS`), and it counts in process memory, which makes it looser than it looks:
+`next start` answers requests from several worker processes, each holding its own counter, so the
+real allowance is `RATE_MAX` per process, not per instance. Measured against the Render deploy on
+2026-10-25 that was about three processes — roughly 15 submissions per IP in 15 minutes, not 5.
+Making it exact would need a shared store, which this site deliberately has not got, and the
+looser bound is still a bound. The same check confirmed the part that does matter: a made-up
+`X-Forwarded-For`, a fresh one on every request, and no header at all were all still limited, so
+the key is never the client's to choose. Bodies over 16 KB are refused without being read in full.
+The route logs one line per outcome and never logs a name, email, phone, message or IP.
+`tests/enquiry.test.mjs` covers all of this.
 
 `GET /api/health` answers `{"status":"ok"}` for an uptime monitor. It reads no configuration and
 calls nothing.
