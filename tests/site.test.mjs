@@ -76,10 +76,7 @@ test("removed tutor directory routes redirect permanently without public links",
   assert.doesNotMatch(source, /["'`]\/our(?:-tutors|Tutors)(?:["'`#?])/);
   assert.doesNotMatch(source, /TutorDirectory|window\.socket|cdn\.tutorcruncher\.com|\.tcs-/);
   assert.doesNotMatch(sitemapSource, /["']\/our-tutors["']/);
-  assert.match(
-    siteSource,
-    /tutorLoginUrl:\s*"https:\/\/secure\.tutorcruncher\.com\/learnthrive-tuition\/login\/"/,
-  );
+  assert.doesNotMatch(siteSource, /tutorLoginUrl|secure\.tutorcruncher\.com/);
 });
 
 test("subject landing paths and visible calls to action stay mapped together", () => {

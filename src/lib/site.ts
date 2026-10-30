@@ -22,7 +22,6 @@ export const siteConfig = {
     instagram: "https://www.instagram.com/learnthrivetuition/",
     linkedin: "https://www.linkedin.com/company/learnthrive-tuition/",
   },
-  tutorLoginUrl: "https://secure.tutorcruncher.com/learnthrive-tuition/login/",
   legalName: "LearnThrive Tuition Ltd",
   companyNumber: "16680738",
   registeredIn: "England and Wales",

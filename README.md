@@ -164,5 +164,5 @@ company decisions and the authoritative guidance consulted are recorded in `LEGA
 Every public route is listed in `src/app/sitemap.ts` and has a preview card in `src/lib/ogPages.ts`
 (served from `/og/...`); `tests/site.test.mjs` fails if a page folder is missing from either.
 
-The old public tutor URLs permanently redirect to About. The separate external Tutor login
-remains available in the footer.
+The old public tutor URLs permanently redirect to About. The external tutor login that used to
+sit in the footer was removed on 2026-10-30; `tests/site.test.mjs` fails if it returns.
