@@ -4,7 +4,9 @@ import { buildSecurityHeaders } from "./src/lib/securityHeaders";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
-    formats: ["image/avif", "image/webp"],
+    // WebP only: images are encoded on request on a 512 MB instance, and four AVIF encodes at once ran
+    // it out of memory in production.
+    formats: ["image/webp"],
   },
   async headers() {
     return [
